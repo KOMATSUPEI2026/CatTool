@@ -2024,6 +2024,29 @@ function uniqueDocName(name){
   return `${name} (${n})`;
 }
 
+/* 語系配對與檔案表頭不符 → 置中報錯 Modal（雙欄必備） */
+function openXlsxMismatchModal(fileName, src, tgt, detectedCodes){
+  const detected = detectedCodes.length
+    ? detectedCodes.map(c=>`「${escapeHtml(c)}」`).join('、')
+    : '（未偵測到已知語系代碼欄）';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-center modal-card-wide">
+      <h3>語系配對與檔案不符</h3>
+      <p class="modal-confirm-text">所選配對：${escapeHtml(langName(src))}（${escapeHtml(src)}）→ ${escapeHtml(langName(tgt))}（${escapeHtml(tgt)}）<br>
+      「${escapeHtml(fileName)}」表頭偵測到的語系欄：${detected}<br>
+      請改選正確的語系配對，或確認檔案表頭欄名後重新拖入。</p>
+      <div class="modal-actions modal-actions-center">
+        <button class="btn vermilion large" id="xlsx-mismatch-ok">我知道了</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('xlsx-mismatch-ok').addEventListener('click', ()=>overlay.remove());
+}
+
 function parseXlsxFile(file){
   const drop = document.getElementById('xlsx-drop');
   const btn = document.getElementById('btn-xlsx-create');
@@ -2049,6 +2072,9 @@ function parseXlsxFile(file){
     const wb = XLSX.read(buf);
     const sheets = [];
     const skipped = [];
+    const mismatched = [];                       // 表頭缺來源或目標欄的分頁
+    const detectedCodes = new Set();             // 表頭中偵測到的已知語系代碼（供報錯提示）
+    const langCodesLower = Object.keys(LANG_NAMES).map(c=>c.toLowerCase());
     wb.SheetNames.forEach(sn=>{
       const grid = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null});
       if(grid.length < 2){ skipped.push(sn); return; }
@@ -2058,11 +2084,16 @@ function parseXlsxFile(file){
       const srcCol = headerLower.indexOf(src.toLowerCase());
       const tgtCol = headerLower.indexOf(tgt.toLowerCase());
       const noCol = header.indexOf('標號');
-      if(srcCol === -1){ skipped.push(sn); return; }
+      // 雙欄必備：來源與目標語系欄缺一即擋（避免選錯配對時無聲匯入）
+      if(srcCol === -1 || tgtCol === -1){
+        headerLower.forEach((h,i)=>{ if(langCodesLower.includes(h)) detectedCodes.add(header[i]); });
+        mismatched.push(sn);
+        return;
+      }
       const rows = [];
       for(let r=1; r<grid.length; r++){
         const ja = grid[r][srcCol]===null ? '' : String(grid[r][srcCol]).replace(/\r\n?/g,'\n').trim();
-        const zh = (tgtCol!==-1 && grid[r][tgtCol]!==null) ? String(grid[r][tgtCol]).replace(/\r\n?/g,'\n').trim() : '';
+        const zh = grid[r][tgtCol]!==null ? String(grid[r][tgtCol]).replace(/\r\n?/g,'\n').trim() : '';
         if(!ja && !zh) continue;   // 空白模板列略過
         const srcNo = (noCol!==-1 && grid[r][noCol]!==null) ? String(grid[r][noCol]).trim() : null;
         rows.push({ja, zh, srcNo});
@@ -2072,14 +2103,21 @@ function parseXlsxFile(file){
     });
     if(sheets.length === 0){
       drop.classList.remove('staged');
-      drop.innerHTML = `<div class="drop-title">讀不到可匯入的資料</div><div>請確認分頁表頭含「${escapeHtml(src)}」欄，且至少一列有內容</div>`;
       stagedXlsx = null; btn.disabled = true;
+      if(mismatched.length > 0){
+        // 全部分頁表頭欄位不符 → 置中 Modal 報錯，拖放區回初始提示
+        drop.innerHTML = '<div class="drop-title">拖入 .xlsx 檔案</div><div>或點擊選擇檔案｜每個分頁（P001、P002…）建立一個文件</div>';
+        openXlsxMismatchModal(file.name, src, tgt, [...detectedCodes]);
+      }else{
+        drop.innerHTML = `<div class="drop-title">讀不到可匯入的資料</div><div>請確認分頁表頭含「${escapeHtml(src)}」與「${escapeHtml(tgt)}」兩欄，且至少一列有內容</div>`;
+      }
       return;
     }
     stagedXlsx = { fileName:file.name, sheets, src, tgt };
     const totalSegs = sheets.reduce((sum,s)=>sum+s.rows.length, 0);
     const detail = sheets.map(s=>`${escapeHtml(s.name)}（${s.rows.length} 段）`).join('、');
-    const skipNote = skipped.length ? `<div class="staged-detail">略過空分頁：${skipped.map(escapeHtml).join('、')}</div>` : '';
+    const skippedAll = [...skipped, ...mismatched.map(sn=>`${sn}（表頭欄位不符）`)];
+    const skipNote = skippedAll.length ? `<div class="staged-detail">略過分頁：${skippedAll.map(escapeHtml).join('、')}</div>` : '';
     drop.classList.add('staged');
     drop.innerHTML = `
       <div class="staged-file"><i class="bi bi-file-earmark-spreadsheet"></i> ${escapeHtml(file.name)}</div>
