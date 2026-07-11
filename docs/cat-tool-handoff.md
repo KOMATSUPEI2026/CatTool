@@ -1,8 +1,8 @@
-# 校譯台（cat-tool-demo）交接文件 V36
+# 校譯台（cat-tool-demo）交接文件 V37
 
 > 用途：在 Claude Code 中以本文件 + cat-tool-demo.html 接續開發。
-> 目前版本：**第 36 版**（V23 → V36 演進，變更摘要見下）
-> 上一份交接文件版本：V23。本文件已整併 V24–V36 全部變更與討論結論。
+> 目前版本：**第 37 版**（V23 → V37 演進，變更摘要見下）
+> 上一份交接文件版本：V23。本文件已整併 V24–V37 全部變更與討論結論。
 
 ## 專案概要
 
@@ -12,7 +12,7 @@
 - **資料**：全部存在瀏覽器記憶體，重新整理即清空；各分頁支援 JSON 匯出/匯入備份
 - **開發環境**：M2 MacBook Air，本機瀏覽器直開 HTML
 
-## V24–V36 版本演進摘要
+## V24–V37 版本演進摘要
 
 | 版本 | 變更 |
 |---|---|
@@ -29,6 +29,7 @@
 | V34 | 匯出 JSON 鍵名動態化（{en:…, "zh-TW":…}）、匯入相容四種歷史格式 |
 | V35 | 「特定頁檢視」→「跨頁檢視」，搜尋跨度：檔名/語系代碼/原文譯文內容三路比對 |
 | V36 | **句段整理五功能**（仿 Termsoup Modal 式）：編輯/分割、拖曳排序、相鄰合併（譯文串接）、新增、多選刪除；情境列 5 icon 鈕 |
+| V37 | **快捷標點符號列**（仿 Termsoup）：固定視窗下緣、10 格可自訂、Ctrl/Alt+Shift+1~0；配對括號停中間/包反白；**V28 補齊**——insertIntoSeg 一律退回未確認（術語帶入自此也適用） |
 
 ## 資料模型（核心）
 
@@ -67,7 +68,7 @@ folders    = [{ id, name }]
   - 編輯/合併/刪除送出後作廢搜尋取代復原快照（排序/新增除外）；五者皆更新 updatedAt 並重繪工作區與專案區
 - **檢視模式**：校閱（左右）→ 翻譯（上下）→ 純譯文，循環切換
 - **譯文框自動撐高**：autoGrow（resize:none、overflow hidden），15 個重算掛點（渲染後/打字/套用/檢視切換/字級切換/分頁切回/視窗縮放防抖）。**陷阱**：面板 display:none 時 scrollHeight=0，切回分頁時必須補算
-- **Tab 確認**：存入 TM（帶文件語系配對）、徽章空心→實心 teal；有 tmId 則覆寫同筆、無則新增；清空+Tab 退回未確認、TM 保留
+- **Tab 確認**：存入 TM（帶文件語系配對）、徽章空心→實心 teal；有 tmId 則覆寫同筆、無則新增；清空+Tab 退回未確認、TM 保留。**Shift+Tab 不觸發確認**（V37 修正：反向移動焦點不誤存 TM）
 - **編輯即退回未確認（V28 核心規則）**：已確認句段的譯文一被改動（打字/清空/Enter 套用），confirmed 立即退 false、徽章退空心，**tmId 保留**→重按 Tab 覆寫同筆不產生重複。實心徽章語意 =「按 Tab 後未被動過且與 TM 同步」
 - **重置確認狀態**：置中確認 Modal（440 寬）→ 全文件退回未確認、tmId 保留、作廢取代復原快照
 - **搜尋取代**：僅目前檔案；受影響句段退未確認、TM 保留；復原快照（含 docId），被 Tab 重新確認的句段退出快照
@@ -75,6 +76,13 @@ folders    = [{ id, name }]
 - **右側欄翻譯記憶**：相似模式（bigram Jaccard 前 8 筆）/搜尋模式，**只比對同配對紀錄**；卡片 Tab=更新該筆、Enter=套用至左側（套用即編輯→退回未確認）
 - **左側欄頁面檢視**：上下頁檢視／**跨頁檢視**（V35：檔名/語系代碼/內文三路搜尋，最多列 3 檔，IME 相容）
 - **置頂/置底膠囊**：貼內容區右緣外側、垂直置中、z-index 80；僅專案管理區與翻譯工作區顯示
+- **快捷標點符號列（V37，仿 Termsoup）**：固定視窗下緣置中（z-index 70），僅翻譯工作區顯示；10 格預設 ，。；：、「」『』！？“”（`punctBar` 陣列，session 內有效、重整回預設）
+  - **插入守門（V37 修正）**：目標＝`document.activeElement` 必須是工作區句段譯文框，否則靜默不動作——防止焦點在搜尋框/Modal/側欄時快捷鍵隱形改字；bar 上 mousedown preventDefault 保焦點，插入後游標留原處
+  - **快捷鍵 Ctrl/Alt+Shift+1~0**（Digit0＝第 10 格）：術語卡片顯示時術語優先；F 鍵方案因 Mac 系統佔用已評估否決；比照術語快捷鍵不檢查 isComposing
+  - **配對括號加值（白名單制，V37 修正）**：僅 `PUNCT_PAIRS` 內的括號組（「」『』（）《》〈〉【】〔〕“”‘’()[]{}）走「無反白停中間/有反白包住」；其他多字元符號（如……）整串插入
+  - 空格位 class 取名 `blank`（勿用 `empty`，撞名全域空狀態樣式）；暗黑模式有專屬覆寫（bar 底 --tooltip-bg、邊框亮一階）；`#panel-work` 底部留白 72px 防 fixed 列遮擋
+  - **✎ 編輯模式**：點 ✎ 進入後點任一格開「設定快捷符號」Modal（360 寬、maxlength 4、存空值＝清空格位）；一般模式點空格子也開設定
+  - **V28 補齊（重要）**：退回未確認邏輯已收進 `insertIntoSeg`（程式化改值不觸發 input 事件），V37 起術語卡片帶入與標點插入都會讓已確認句段退回未確認、徽章退空心（tmId 保留）
 
 ## 核心設計決策（歷次討論定案，勿隨意推翻）
 
@@ -91,7 +99,7 @@ folders    = [{ id, name }]
 - **配色（亮色）**：紙 #E7E4DC / 卡片 #FBFAF7 / 墨 #272522 / 朱紅 #B33A2E / teal #1F5C5C；暗黑模式有對應變數；進度條專用 --progress-translate / --progress-confirm（淺一階 60% 透明，雙主題）
 - **字體**：UI=Noto Sans TC；標題/分頁/徽章=Noto Serif TC；日文原文=Noto Serif JP
 - **刻度**：字級僅 10/12/14/16/24px；spacing 全偶數 px 禁 .5；圓角 2/4/6/8/10/20px + 50%；唯一奇數例外=1px 邊框。標記 ×scale 的屬性乘 --text-scale / --side-scale / --ui-pad-scale
-- **V24–V36 新元件刻度**：頁碼鈕 12px/28×28/radius 4（active 朱紅底白字）；進度條軌 8px 高/radius 10；膠囊 radius 20/按鈕 padding 10 8；語系 select 14px/padding 8 10/radius 4；拖放區 2px dashed/radius 6/padding 40 16；加寬 Modal 440px；句段整理 Modal 720px（modal-card-xl）/清單 max-height 56vh/項目 padding 10 12/警示標籤 10px/radius 4
+- **V24–V36 新元件刻度**：頁碼鈕 12px/28×28/radius 4（active 朱紅底白字）；進度條軌 8px 高/radius 10；膠囊 radius 20/按鈕 padding 10 8；語系 select 14px/padding 8 10/radius 4；拖放區 2px dashed/radius 6/padding 40 16；加寬 Modal 440px；句段整理 Modal 720px（modal-card-xl）/清單 max-height 56vh/項目 padding 10 12/警示標籤 10px/radius 4；標點列 bottom 12/padding 8 12/radius 20、鍵 36×36 radius 50%/符號 16px/角標 10px（14×14 teal 底）
 - 詳細元件刻度表沿用 V23 交接文件（本次未變更的元件全部維持原值）
 
 ## 已知注意事項（血淚教訓，Claude Code 必讀）
@@ -104,6 +112,7 @@ folders    = [{ id, name }]
 6. 重大修改後驗證：CSS 大括號配對、`node --check`（抽出 script 檢查）、設計規範刻度掃描（字級/偶數 spacing）
 7. TM 相似度為字元 bigram Jaccard，非商用 CAT 等級
 8. CDN 三依賴首次載入需網路；SheetJS 載入失敗時拖放區有明確提示（非無聲失敗）
+9. **class 命名撞名陷阱**：新元件的 class 必須避開全站既有類名——V37 標點列空格鍵曾取名 `empty`，撞上全域空狀態樣式 `.empty{padding:50px 20px}` 被灌大內距跑版（已改名 `blank`）。新增 class 前先 grep 確認未被占用
 
 ## 討論中/未實作事項
 

@@ -108,6 +108,8 @@
 
   .panel{display:none;}
   .panel.active{display:block;}
+  /* 工作區底部留白：避免 fixed 標點列蓋住最後一句與匯出列 */
+  #panel-work{padding-bottom:72px;}
 
   /* card base */
   .card{background:var(--paper-card);border:1px solid var(--line);border-radius:var(--radius);}
@@ -188,6 +190,47 @@
   }
   .scroll-capsule button:hover{background:var(--hover-tint);color:var(--vermilion);}
   .scroll-capsule button:first-child{border-bottom:1px solid var(--line);}
+
+  /* 快捷標點符號列（V37：固定視窗下緣置中，僅翻譯工作區顯示） */
+  #punct-bar{
+    position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:70;
+    display:none;align-items:center;gap:6px;padding:8px 12px;
+    background:var(--paper-card);border:1px solid var(--line);border-radius:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,.14);
+  }
+  #punct-bar.show{display:flex;}
+  .punct-key{
+    position:relative;width:36px;height:36px;padding:0;flex:none;border-radius:50%;
+    border:1px solid var(--line);background:var(--surface-input);color:var(--ink);
+    font-family:"Noto Serif TC",serif;font-size:16px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:border-color .15s, background .15s;
+  }
+  .punct-key:hover{border-color:var(--vermilion);background:var(--hover-tint);}
+  .punct-key .punct-num{
+    position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;
+    background:var(--seal);color:#fff;font-size:10px;font-weight:600;
+    font-family:"Noto Sans TC",sans-serif;display:flex;align-items:center;justify-content:center;
+  }
+  /* 空格位：class 取名 blank——「empty」與全站空狀態提示 .empty 撞名會被灌大內距 */
+  .punct-key.blank{color:var(--ink-soft);border-style:dashed;}
+  #punct-bar.editing .punct-key{border:1px dashed var(--vermilion);}
+  .punct-edit-toggle{
+    width:36px;height:36px;border-radius:50%;border:1px solid var(--line);
+    background:transparent;color:var(--ink-soft);font-size:14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;margin-left:2px;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .punct-edit-toggle:hover{border-color:var(--vermilion);color:var(--vermilion);}
+  #punct-bar.editing .punct-edit-toggle{background:var(--vermilion);border-color:var(--vermilion);color:#fff;}
+  /* 暗黑模式：bar 底比頁面更深、鍵面浮出、邊框亮一階，避免溶於背景 */
+  :root[data-theme="dark"] #punct-bar{
+    background:var(--tooltip-bg);
+    border-color:rgba(163,157,144,.4);
+    box-shadow:0 4px 16px rgba(0,0,0,.5);
+  }
+  :root[data-theme="dark"] .punct-key,
+  :root[data-theme="dark"] .punct-edit-toggle{border-color:rgba(163,157,144,.4);}
   .sr-bar input{
     border:1px solid var(--line);border-radius:4px;padding:6px 10px;
     font-size:12px;background:var(--surface-input);color:var(--ink);
@@ -1784,7 +1827,8 @@ function openDeleteTermModal(term){
 }
 
 /* ---------------- 插入文字到指定句段的譯文欄 ---------------- */
-function insertIntoSeg(segId, text){
+/* caretOffset：插入後游標相對插入起點的位移（配對括號停中間用）；省略＝停在插入文字之後 */
+function insertIntoSeg(segId, text, caretOffset){
   const doc = getCurrentDoc();
   if(!doc) return;
   const ta = document.querySelector(`textarea[data-seg="${segId}"]`);
@@ -1795,8 +1839,16 @@ function insertIntoSeg(segId, text){
   const newVal = ta.value.slice(0,start) + text + ta.value.slice(end);
   ta.value = newVal;
   seg.zh = newVal;
+  // 程式化改值不會觸發 input 事件，V28「編輯即退回未確認」在此補上（V37 起術語帶入/標點插入一體適用）
+  if(seg.confirmed){
+    seg.confirmed = false;
+    ta.closest('.seg')?.classList.remove('confirmed');
+    updateStats();
+    updateWorkProgress();
+  }
   doc.updatedAt = Date.now();
-  const pos = start + text.length;
+  autoGrow(ta);
+  const pos = start + (caretOffset ?? text.length);
   ta.focus();
   ta.setSelectionRange(pos,pos);
 }
@@ -1936,6 +1988,7 @@ function activateTab(key){
   updateTMSidebarVisibility(key);
   updatePVSidebarVisibility(key);
   document.getElementById('scroll-capsule')?.classList.toggle('show', key==='projects' || key==='work');
+  document.getElementById('punct-bar')?.classList.toggle('show', key==='work');
   if(key==='projects') renderProjects();
   if(key==='work'){ renderPVSidebar(); autoGrowAll('#seg-list textarea'); }
 }
@@ -2532,7 +2585,8 @@ document.getElementById('seg-list').addEventListener('input', (e)=>{
 });
 
 document.getElementById('seg-list').addEventListener('keydown', (e)=>{
-  if(e.target.tagName==='TEXTAREA' && e.key==='Tab'){
+  // Shift+Tab 是反向移動焦點，不觸發確認（避免往回瀏覽時誤存 TM）
+  if(e.target.tagName==='TEXTAREA' && e.key==='Tab' && !e.shiftKey){
     confirmSegmentLight(e.target.dataset.seg, e.target.value);
   }
 });
@@ -2742,12 +2796,113 @@ renderTMTable();
   <button id="scroll-top-btn" title="回到頂端"><i class="bi bi-caret-up"></i></button>
   <button id="scroll-bottom-btn" title="移至底端"><i class="bi bi-caret-down"></i></button>
 </div>
+<div id="punct-bar"></div>
 <script>
 document.getElementById('scroll-top-btn').addEventListener('click', ()=>{
   window.scrollTo({top:0, behavior:'smooth'});
 });
 document.getElementById('scroll-bottom-btn').addEventListener('click', ()=>{
   window.scrollTo({top:document.documentElement.scrollHeight, behavior:'smooth'});
+});
+
+/* ---------------- 快捷標點符號列（V37，仿 Termsoup） ---------------- */
+/* 10 格對應 Ctrl(Mac)/Alt(Win)+Shift+1~0；session 內有效，重新整理回預設 */
+let punctBar = ['，','。','；','：','、','「」','『』','！','？','“”'];
+/* 配對括號白名單：只有這些 2 字元組才走「停中間/包反白」，其他多字元符號（如……）整串插入 */
+const PUNCT_PAIRS = ['「」','『』','（）','《》','〈〉','【】','〔〕','“”','‘’','()','[]','{}'];
+
+function renderPunctBar(){
+  const bar = document.getElementById('punct-bar');
+  const editing = bar.classList.contains('editing');
+  bar.innerHTML = punctBar.map((p,i)=>`
+    <button class="punct-key${p?'':' blank'}" data-idx="${i}" title="Ctrl/Alt+Shift+${(i+1)%10}">
+      ${p ? escapeHtml(p) : '<i class="bi bi-plus"></i>'}
+      <span class="punct-num">${(i+1)%10}</span>
+    </button>`).join('') +
+    `<button class="punct-edit-toggle" id="punct-edit-toggle" title="${editing?'完成編輯':'編輯快捷符號'}">
+      <i class="bi ${editing?'bi-check-lg':'bi-pencil'}"></i>
+    </button>`;
+}
+renderPunctBar();
+
+/* 插入標點：目標以「當下焦點」守門——必須聚焦在工作區句段譯文框才插入，
+   避免焦點在搜尋框/Modal/側欄時快捷鍵隱形改字（點 bar 因 mousedown preventDefault 不奪焦） */
+function insertPunct(text){
+  if(!text) return;
+  const ta = document.activeElement;
+  if(!ta || ta.tagName!=='TEXTAREA' || !ta.dataset.seg || !ta.closest('#seg-list')) return;
+  const segId = ta.dataset.seg;
+  if(PUNCT_PAIRS.includes(text)){
+    const start = ta.selectionStart ?? 0;
+    const end = ta.selectionEnd ?? start;
+    if(end > start){
+      const wrapped = text[0] + ta.value.slice(start,end) + text[1];
+      insertIntoSeg(segId, wrapped);          // 游標停在右括號後
+    } else {
+      insertIntoSeg(segId, text, 1);          // 游標停在括號中間
+    }
+    return;
+  }
+  insertIntoSeg(segId, text);
+}
+
+/* 點擊：一般模式＝插入（空格子開設定）；編輯模式＝一律開設定 */
+document.getElementById('punct-bar').addEventListener('mousedown', (e)=>{
+  e.preventDefault();   // 保住 textarea 焦點，插入後游標留在原處
+});
+document.getElementById('punct-bar').addEventListener('click', (e)=>{
+  const bar = document.getElementById('punct-bar');
+  if(e.target.closest('#punct-edit-toggle')){
+    bar.classList.toggle('editing');
+    renderPunctBar();
+    return;
+  }
+  const key = e.target.closest('.punct-key');
+  if(!key) return;
+  const idx = +key.dataset.idx;
+  if(bar.classList.contains('editing') || !punctBar[idx]){ openPunctModal(idx); return; }
+  insertPunct(punctBar[idx]);
+});
+
+/* 設定快捷符號 Modal（360 寬，沿用既有 modal 樣式） */
+function openPunctModal(idx){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <h3>設定快捷符號（第 ${idx+1} 格）</h3>
+      <div class="modal-field">
+        <label>符號內容（最多 4 字；配對括號輸入整組如「」；留空＝清空格位）</label>
+        <input type="text" id="punct-input" maxlength="4" value="${escapeAttr(punctBar[idx]||'')}">
+      </div>
+      <div class="modal-actions">
+        <button class="btn outline" id="punct-cancel">取消</button>
+        <button class="btn vermilion" id="punct-save">儲存</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('punct-cancel').addEventListener('click', ()=>overlay.remove());
+  document.getElementById('punct-save').addEventListener('click', ()=>{
+    punctBar[idx] = document.getElementById('punct-input').value.trim();
+    overlay.remove();
+    renderPunctBar();
+  });
+  const input = document.getElementById('punct-input');
+  input.focus(); input.select();
+}
+
+/* 快捷鍵 Ctrl/Alt+Shift+1~0（Digit0＝第 10 格）。術語卡片顯示時術語優先。
+   比照術語快捷鍵不檢查 isComposing：中文輸入法下事件標記不可靠，且此組合不參與組字 */
+document.addEventListener('keydown', (e)=>{
+  if(activeTip) return;
+  if(!(e.ctrlKey || e.altKey) || !e.shiftKey) return;
+  const match = /^Digit([0-9])$/.exec(e.code);
+  if(!match) return;
+  const idx = (parseInt(match[1],10) + 9) % 10;   // 1→0 … 9→8、0→9
+  if(!punctBar[idx]) return;
+  e.preventDefault();
+  insertPunct(punctBar[idx]);
 });
 let _growTimer = null;
 window.addEventListener('resize', ()=>{
