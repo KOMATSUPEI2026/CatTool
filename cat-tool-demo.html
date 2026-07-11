@@ -509,6 +509,43 @@
   .modal-field.ja input{font-family:"Noto Serif JP","Noto Serif TC",serif;}
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
+  /* 句段整理 Modal（編輯/分割、排列、合併、刪除共用；V36） */
+  .modal-card.modal-card-xl{width:720px;}
+  .seg-tool-hint{font-size:12px;color:var(--ink-soft);margin:0 0 10px;}
+  .seg-tool-list{max-height:56vh;overflow-y:auto;border:1px solid var(--line);border-radius:6px;}
+  .seg-tool-item{display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:flex-start;}
+  .seg-tool-item:last-child{border-bottom:none;}
+  .seg-tool-num{font-size:12px;font-weight:600;color:var(--ink-soft);min-width:24px;padding-top:2px;}
+  .seg-tool-text{
+    flex:1;font-size:14px;line-height:1.6;color:var(--ink);
+    font-family:"Noto Serif JP","Noto Serif TC",serif;white-space:pre-wrap;word-break:break-word;
+  }
+  .seg-tool-item textarea{
+    flex:1;border:1px solid transparent;background:transparent;resize:none;
+    font-family:"Noto Serif JP","Noto Serif TC",serif;font-size:14px;line-height:1.6;
+    color:var(--ink);padding:2px 4px;border-radius:4px;
+  }
+  .seg-tool-item textarea:focus{outline:none;border-color:var(--vermilion);background:var(--surface-input);}
+  .seg-tool-item.selectable{cursor:pointer;}
+  .seg-tool-item.selectable:hover{background:var(--hover-tint);}
+  .seg-tool-item.selected{background:var(--hover-tint);}
+  .seg-tool-check{visibility:hidden;color:var(--seal);font-size:14px;padding-top:2px;}
+  .seg-tool-item.selected .seg-tool-check{visibility:visible;}
+  .seg-tool-flag{
+    font-size:10px;font-weight:600;color:var(--vermilion);border:1px solid var(--vermilion);
+    border-radius:4px;padding:0 4px;white-space:nowrap;margin-top:2px;
+    font-family:"Noto Sans TC",sans-serif;
+  }
+  .seg-tool-newtext{
+    width:100%;border:1px solid var(--line);border-radius:4px;margin-top:10px;
+    padding:8px 10px;font-family:"Noto Serif JP","Noto Serif TC",serif;font-size:14px;line-height:1.6;
+    background:var(--surface-input);color:var(--ink);resize:none;min-height:72px;
+  }
+  .seg-tool-newtext:focus{outline:none;border-color:var(--vermilion);}
+  .seg-tool-item[draggable="true"]{cursor:grab;}
+  .seg-tool-item.dragging{opacity:.5;background:var(--hover-tint);}
+  .seg-tool-err{font-size:12px;color:var(--vermilion);margin-top:8px;display:none;}
+
   /* table (term base / TM list / project) */
   table{width:100%;border-collapse:collapse;font-size:14px;}
   thead th{
@@ -691,6 +728,11 @@
         <span style="display:inline-flex;gap:10px;">
           <button class="icon-btn" id="btn-back-projects"><i class="bi bi-arrow-left"></i> 返回專案管理區</button>
           <button class="icon-btn" id="btn-reset-confirm"><i class="bi bi-arrow-counterclockwise"></i> 重置確認狀態</button>
+          <button class="icon-btn" id="btn-seg-edit" title="編輯／分割原文"><i class="bi bi-pencil-square"></i></button>
+          <button class="icon-btn" id="btn-seg-reorder" title="重新排列原文"><i class="bi bi-arrow-down-up"></i></button>
+          <button class="icon-btn" id="btn-seg-merge" title="合併原文"><i class="bi bi-arrows-collapse"></i></button>
+          <button class="icon-btn" id="btn-seg-add" title="新增原文"><i class="bi bi-plus-lg"></i></button>
+          <button class="icon-btn" id="btn-seg-delete" title="刪除原文"><i class="bi bi-trash3"></i></button>
         </span>
       </div>
       <div class="progress-row">
@@ -1935,6 +1977,277 @@ document.getElementById('btn-reset-confirm').addEventListener('click', ()=>{
     overlay.remove();
     renderSegments();
     updateStats();
+  });
+});
+
+/* ---------------- 句段整理：編輯/分割、排列、合併、刪除（V36，仿 Termsoup Modal 式） ---------------- */
+/* CJK 語系串接不加空格，其餘以半形空格串接（合併原文/譯文時依各自語系決定） */
+function langJoiner(code){ return /^(ja|zh|ko|th)/.test(code||'') ? '' : ' '; }
+
+/* 共用外殼：標題 + 提示 + 可捲動清單 + 錯誤列 + 取消/送出 */
+function segToolOverlay(title, hint){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-xl">
+      <h3>${title}</h3>
+      <p class="seg-tool-hint">${hint}</p>
+      <div class="seg-tool-list"></div>
+      <div class="seg-tool-err"></div>
+      <div class="modal-actions">
+        <button class="btn outline" data-role="cancel">取消</button>
+        <button class="btn vermilion" data-role="submit">送出</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('[data-role="cancel"]').addEventListener('click', ()=>overlay.remove());
+  return overlay;
+}
+function segToolError(overlay, msg){
+  const el = overlay.querySelector('.seg-tool-err');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+/* 多選清單項（合併/刪除共用）；flags 只在刪除 Modal 用來警示 */
+function segToolItemHtml(seg, i, flagsHtml){
+  return `
+    <div class="seg-tool-item selectable" data-segid="${seg.id}">
+      <span class="seg-tool-num">${i+1}</span>
+      <div class="seg-tool-text">${escapeHtml(seg.ja)}</div>
+      ${flagsHtml || ''}
+      <i class="bi bi-check-lg seg-tool-check"></i>
+    </div>`;
+}
+function bindSegToolSelect(listEl, sel){
+  listEl.addEventListener('click', (e)=>{
+    const item = e.target.closest('.seg-tool-item');
+    if(!item) return;
+    const id = item.dataset.segid;
+    if(sel.has(id)){ sel.delete(id); item.classList.remove('selected'); }
+    else { sel.add(id); item.classList.add('selected'); }
+  });
+}
+
+/* --- 編輯／分割句子：游標放入句內按 Enter 分割；改動原文＝退回未確認（V28 延伸） --- */
+document.getElementById('btn-seg-edit').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  if(doc.segments.length === 0){ alert('目前檔案沒有句段。'); return; }
+  // 工作副本：segId 對回原句段；分割出的新句 segId 為 null（送出時才生效）
+  let items = doc.segments.map(s=>({segId:s.id, ja:s.ja}));
+  const overlay = segToolOverlay('編輯／分割句子', '可直接修改原文；游標放入句子內，再按 Enter 可分割句子。清空的句子送出後將被移除。');
+  const listEl = overlay.querySelector('.seg-tool-list');
+
+  function renderList(focusIdx){
+    listEl.innerHTML = items.map((it,i)=>`
+      <div class="seg-tool-item">
+        <span class="seg-tool-num">${i+1}</span>
+        <textarea data-idx="${i}">${escapeHtml(it.ja)}</textarea>
+      </div>`).join('');
+    listEl.querySelectorAll('textarea').forEach(autoGrow);
+    if(focusIdx != null){
+      const ta = listEl.querySelector(`textarea[data-idx="${focusIdx}"]`);
+      if(ta){ ta.focus(); ta.setSelectionRange(0,0); }
+    }
+  }
+  renderList();
+
+  listEl.addEventListener('input', (e)=>{
+    if(e.target.tagName !== 'TEXTAREA') return;
+    items[+e.target.dataset.idx].ja = e.target.value;
+    autoGrow(e.target);
+  });
+  listEl.addEventListener('keydown', (e)=>{
+    if(e.target.tagName !== 'TEXTAREA' || e.key !== 'Enter') return;
+    if(e.isComposing || e.keyCode === 229) return;   // IME 組字確認的 Enter 交還輸入法，不觸發分割
+    e.preventDefault();
+    const idx = +e.target.dataset.idx;
+    const pos = e.target.selectionStart;
+    const text = e.target.value;
+    if(pos <= 0 || pos >= text.length) return;       // 頭尾分割無意義
+    items[idx].ja = text.slice(0, pos);
+    items.splice(idx+1, 0, {segId:null, ja:text.slice(pos)});
+    renderList(idx+1);
+  });
+
+  overlay.querySelector('[data-role="submit"]').addEventListener('click', ()=>{
+    const kept = [];
+    items.forEach(it=>{
+      if(!it.ja.trim()) return;                      // 清空的句子視同刪除
+      if(it.segId){
+        const seg = doc.segments.find(s=>s.id===it.segId);
+        if(seg){
+          // 原文被改動＝與 TM 那筆已對不上：退回未確認、解除參照；TM 紀錄保留
+          if(seg.ja !== it.ja){ seg.ja = it.ja; seg.confirmed = false; seg.tmId = null; }
+          kept.push(seg);
+          return;
+        }
+      }
+      // 分割出的後半句：譯文留在前半句，這裡從空白開始
+      kept.push({id:cid(), ja:it.ja, zh:'', confirmed:false, tmId:null});
+    });
+    if(kept.length === 0){ segToolError(overlay, '至少要保留一個句段。'); return; }
+    doc.segments = kept;
+    doc.updatedAt = Date.now();
+    if(srUndoSnapshot && srUndoSnapshot.docId === doc.id) srUndoSnapshot = null;
+    overlay.remove();
+    renderSegments();
+    renderProjects();
+  });
+});
+
+/* --- 排序句子：Modal 內拖曳排列；不動 confirmed/tmId --- */
+document.getElementById('btn-seg-reorder').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  if(doc.segments.length < 2){ alert('至少需要兩個句段才能排序。'); return; }
+  const overlay = segToolOverlay('排序句子', '按住任一句段上下拖曳調整順序，按「送出」後生效。');
+  const listEl = overlay.querySelector('.seg-tool-list');
+  listEl.innerHTML = doc.segments.map((seg,i)=>`
+    <div class="seg-tool-item" draggable="true" data-segid="${seg.id}">
+      <span class="seg-tool-num">${i+1}</span>
+      <div class="seg-tool-text">${escapeHtml(seg.ja)}</div>
+    </div>`).join('');
+
+  let draggingEl = null;
+  listEl.addEventListener('dragstart', (e)=>{
+    draggingEl = e.target.closest('.seg-tool-item');
+    if(!draggingEl) return;
+    draggingEl.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');        // Firefox 需要 setData 才會啟動拖曳
+  });
+  listEl.addEventListener('dragover', (e)=>{
+    e.preventDefault();
+    if(!draggingEl) return;
+    const after = [...listEl.querySelectorAll('.seg-tool-item:not(.dragging)')]
+      .find(el => e.clientY < el.getBoundingClientRect().top + el.offsetHeight/2);
+    if(after) listEl.insertBefore(draggingEl, after);
+    else listEl.appendChild(draggingEl);
+  });
+  listEl.addEventListener('dragend', ()=>{
+    if(draggingEl) draggingEl.classList.remove('dragging');
+    draggingEl = null;
+    // 拖完依目前 DOM 順序重編號
+    [...listEl.querySelectorAll('.seg-tool-num')].forEach((el,i)=>{ el.textContent = i+1; });
+  });
+
+  overlay.querySelector('[data-role="submit"]').addEventListener('click', ()=>{
+    const orderIds = [...listEl.querySelectorAll('.seg-tool-item')].map(el=>el.dataset.segid);
+    doc.segments = orderIds.map(id=>doc.segments.find(s=>s.id===id));
+    doc.updatedAt = Date.now();
+    // 排序不改任何句段內容與狀態，復原快照以 segId 對回，仍然有效，不作廢
+    overlay.remove();
+    renderSegments();
+    renderProjects();
+  });
+});
+
+/* --- 合併句子：多選且必須相鄰；原文/譯文各依語系串接，合併句退回未確認 --- */
+document.getElementById('btn-seg-merge').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  if(doc.segments.length < 2){ alert('至少需要兩個句段才能合併。'); return; }
+  const overlay = segToolOverlay('合併句子', '選取兩個以上「相鄰」的句子後送出；原文與譯文都會串接，合併後退回未確認。');
+  const listEl = overlay.querySelector('.seg-tool-list');
+  listEl.innerHTML = doc.segments.map((seg,i)=>segToolItemHtml(seg, i)).join('');
+  const sel = new Set();
+  bindSegToolSelect(listEl, sel);
+
+  overlay.querySelector('[data-role="submit"]').addEventListener('click', ()=>{
+    const indices = doc.segments.map((s,i)=>sel.has(s.id)?i:-1).filter(i=>i>=0);
+    if(indices.length < 2){ segToolError(overlay, '請選取至少兩個句子。'); return; }
+    if(!indices.every((v,k)=>v === indices[0]+k)){
+      segToolError(overlay, '連續的句子才可合併，請選取連續的句子。'); return;
+    }
+    const group = indices.map(i=>doc.segments[i]);
+    const p = docPair(doc);
+    const first = group[0];
+    first.ja = group.map(s=>s.ja).join(langJoiner(p.src));
+    first.zh = group.map(s=>s.zh||'').filter(t=>t.trim()).join(langJoiner(p.tgt));
+    // 合併後的句子與 TM 既有紀錄都對不上：退回未確認、解除參照；TM 紀錄保留
+    first.confirmed = false;
+    first.tmId = null;
+    doc.segments.splice(indices[0], indices.length, first);
+    doc.updatedAt = Date.now();
+    if(srUndoSnapshot && srUndoSnapshot.docId === doc.id) srUndoSnapshot = null;
+    overlay.remove();
+    renderSegments();
+    renderProjects();
+  });
+});
+
+/* --- 新增句子：點選插入位置（新句插在選取句之後），輸入原文後送出 --- */
+document.getElementById('btn-seg-add').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  const overlay = segToolOverlay('新增句子', '點選插入位置，新句會新增在已勾選的句子之後，新增在首句位子除外；新句譯文空白、未確認。');
+  const listEl = overlay.querySelector('.seg-tool-list');
+  listEl.innerHTML = `
+    <div class="seg-tool-item selectable" data-pos="0">
+      <span class="seg-tool-num">—</span>
+      <div class="seg-tool-text">（插入為第一句）</div>
+      <i class="bi bi-check-lg seg-tool-check"></i>
+    </div>` + doc.segments.map((seg,i)=>`
+    <div class="seg-tool-item selectable" data-pos="${i+1}">
+      <span class="seg-tool-num">${i+1}</span>
+      <div class="seg-tool-text">${escapeHtml(seg.ja)}</div>
+      <i class="bi bi-check-lg seg-tool-check"></i>
+    </div>`).join('');
+
+  // 新句輸入框插在清單之後、錯誤列之前
+  const ta = document.createElement('textarea');
+  ta.className = 'seg-tool-newtext';
+  ta.placeholder = '輸入新句原文…';
+  listEl.after(ta);
+
+  let pos = null;   // 插入位置：0=第一句、i+1=插在第 i+1 句之後（單選）
+  listEl.addEventListener('click', (e)=>{
+    const item = e.target.closest('.seg-tool-item');
+    if(!item) return;
+    listEl.querySelectorAll('.seg-tool-item.selected').forEach(el=>el.classList.remove('selected'));
+    item.classList.add('selected');
+    pos = +item.dataset.pos;
+  });
+
+  overlay.querySelector('[data-role="submit"]').addEventListener('click', ()=>{
+    const text = ta.value.trim();
+    if(pos === null){ segToolError(overlay, '請先點選插入位置。'); return; }
+    if(!text){ segToolError(overlay, '請輸入新句原文。'); return; }
+    // 新句無 srcNo（非模板來源）；不影響既有句段，復原快照仍有效不作廢
+    doc.segments.splice(pos, 0, {id:cid(), ja:text, zh:'', confirmed:false, tmId:null});
+    doc.updatedAt = Date.now();
+    overlay.remove();
+    renderSegments();
+    renderProjects();
+  });
+});
+
+/* --- 刪除句子：多選刪除；已有譯文/已確認者標示警示；TM 紀錄保留 --- */
+document.getElementById('btn-seg-delete').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  if(doc.segments.length === 0){ alert('目前檔案沒有句段。'); return; }
+  const overlay = segToolOverlay('刪除句子', '選取要刪除的句子後送出；刪除後無法復原，翻譯記憶紀錄保留不動。');
+  const listEl = overlay.querySelector('.seg-tool-list');
+  listEl.innerHTML = doc.segments.map((seg,i)=>{
+    const flags = [];
+    if((seg.zh||'').trim()) flags.push('<span class="seg-tool-flag">已有譯文</span>');
+    if(seg.confirmed) flags.push('<span class="seg-tool-flag">已確認</span>');
+    return segToolItemHtml(seg, i, flags.join(''));
+  }).join('');
+  const sel = new Set();
+  bindSegToolSelect(listEl, sel);
+
+  overlay.querySelector('[data-role="submit"]').addEventListener('click', ()=>{
+    if(sel.size === 0){ segToolError(overlay, '請先選取要刪除的句子。'); return; }
+    doc.segments = doc.segments.filter(s=>!sel.has(s.id));
+    doc.updatedAt = Date.now();
+    if(srUndoSnapshot && srUndoSnapshot.docId === doc.id) srUndoSnapshot = null;
+    overlay.remove();
+    renderSegments();
+    renderProjects();
   });
 });
 
