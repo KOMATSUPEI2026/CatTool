@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>校譯台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E7E4DC;
+    --paper-card:#FBFAF7;
+    --ink:#272522;
+    --ink-soft:#5B5750;
+    --line:#D6D1C4;
+    --vermilion:#B33A2E;
+    --vermilion-soft:rgba(179,58,46,0.10);
+    --vermilion-soft2:rgba(179,58,46,0.22);
+    --seal:#1F5C5C;
+    --progress-translate:rgba(201,106,91,.6);   /* 朱紅淺一階 #C96A5B @60% */
+    --progress-confirm:rgba(63,132,132,.6);     /* teal 淺一階 #3F8484 @60% */
+    --seal-soft:rgba(31,92,92,0.10);
+    --seal-soft2:rgba(31,92,92,0.25);
+    --surface-input:#ffffff;
+    --grid-rgba:rgba(39,37,34,0.035);
+    --hover-tint:rgba(39,37,34,0.025);
+    --tooltip-bg:#272522;
+    --tooltip-text:#F2EFE8;
+    --accent-strong:#272522;
+    --accent-strong-text:#F2EFE8;
+    --radius:6px;
+    --text-scale:1;
+    --ui-pad-scale:1;
+    --handle-active-tint:rgba(251,250,247,0.34);
+  }
+  :root[data-text-scale="1.2"]{ --text-scale:1.2; --ui-pad-scale:1.1; }
+  :root[data-text-scale="1.4"]{ --text-scale:1.4; --ui-pad-scale:1.1; }
+  :root[data-theme="dark"]{
+    --paper:#1B1A17;
+    --paper-card:#242220;
+    --ink:#E8E4DA;
+    --ink-soft:#A39D90;
+    --line:#3A372F;
+    --vermilion:#D9614E;
+    --vermilion-soft:rgba(217,97,78,0.16);
+    --vermilion-soft2:rgba(217,97,78,0.32);
+    --seal:#5FB8B8;
+    --progress-translate:rgba(229,137,117,.6);  /* 暗色朱紅淺一階 #E58975 @60% */
+    --progress-confirm:rgba(134,204,204,.6);    /* 暗色 teal 淺一階 #86CCCC @60% */
+    --seal-soft:rgba(95,184,184,0.14);
+    --seal-soft2:rgba(95,184,184,0.30);
+    --surface-input:#2B2925;
+    --grid-rgba:rgba(255,255,255,0.035);
+    --hover-tint:rgba(255,255,255,0.045);
+    --tooltip-bg:#0F0E0C;
+    --tooltip-text:#F2EFE8;
+    --accent-strong:#E8E4DA;
+    --accent-strong-text:#1B1A17;
+    --handle-active-tint:rgba(232,228,218,0.30);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, var(--grid-rgba) 27px, var(--grid-rgba) 28px),
+      var(--paper);
+    color:var(--ink);
+    font-family:"Noto Sans TC", sans-serif;
+    min-height:100vh;
+    transition:background-color .2s, color .2s;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* header */
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:baseline;gap:14px;}
+  .brand .seal-mark{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:34px;height:34px;border-radius:4px;
+    background:var(--vermilion);color:#F6E9E5;
+    font-family:"Noto Serif TC",serif;font-weight:700;font-size:16px;
+    transform:rotate(-3deg);flex-shrink:0;
+  }
+  h1{font-family:"Noto Serif TC",serif;font-weight:700;font-size:24px;margin:0;letter-spacing:.02em;}
+  .tagline{font-size:12px;color:var(--ink-soft);letter-spacing:.04em;}
+  .header-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .stat-line{font-size:12px;color:var(--ink-soft);display:flex;gap:18px;}
+  .stat-line b{color:var(--ink);font-weight:600;}
+  .icon-btn{
+    font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:600;
+    background:transparent;border:1px solid var(--line);color:var(--ink);
+    padding:6px 12px;border-radius:20px;cursor:pointer;transition:border-color .15s;
+  }
+  .icon-btn:hover{border-color:var(--vermilion);}
+
+  /* tabs */
+  nav.tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;}
+  nav.tabs button{
+    font-family:"Noto Serif TC",serif;
+    background:none;border:none;cursor:pointer;
+    font-size:14px;color:var(--ink-soft);
+    padding:8px 4px;margin-right:22px;
+    border-bottom:2px solid transparent;
+    transition:color .15s, border-color .15s;
+  }
+  nav.tabs button.active{color:var(--ink);border-bottom-color:var(--vermilion);font-weight:600;}
+  nav.tabs button:hover{color:var(--ink);}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* card base */
+  .card{background:var(--paper-card);border:1px solid var(--line);border-radius:var(--radius);}
+
+  /* import box */
+  .import-box{padding:16px 18px;margin-bottom:16px;}
+  .import-box label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:8px;letter-spacing:.03em;}
+  .import-box input.doc-name-input{
+    width:100%;border:1px solid var(--line);border-radius:4px;padding:8px 10px;
+    font-size:14px;background:var(--surface-input);color:var(--ink);margin-bottom:14px;font-family:inherit;
+  }
+  .import-box input.doc-name-input:focus{outline:none;border-color:var(--vermilion);}
+  .import-box textarea{
+    width:100%;min-height:96px;resize:vertical;
+    font-family:"Noto Serif JP","Noto Serif TC",serif;font-size:14px;line-height:1.9;
+    border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:var(--surface-input);color:var(--ink);
+  }
+  .import-box textarea:focus{outline:none;border-color:var(--vermilion);}
+  .import-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap;}
+
+  /* 語系配對選擇列 */
+  .lang-pair{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .lang-pair label{margin:0;font-size:12px;color:var(--ink-soft);white-space:nowrap;}
+  .lang-select{
+    font-family:"Noto Sans TC",sans-serif;font-size:14px;
+    padding:8px 10px;border:1px solid var(--line);border-radius:4px;
+    background:var(--surface-input);color:var(--ink);cursor:pointer;
+  }
+  .lang-select:focus{outline:none;border-color:var(--vermilion);}
+  .lang-arrow{font-size:14px;color:var(--ink-soft);}
+  #lang-gate-hint{margin-left:auto;}
+  #lang-gate-hint.ready{color:var(--seal);}
+
+  /* xlsx 拖放入稿 */
+  .xlsx-drop{
+    border:2px dashed var(--line);border-radius:6px;
+    padding:40px 16px;text-align:center;cursor:pointer;
+    font-size:14px;color:var(--ink-soft);line-height:1.8;
+    transition:border-color .15s, background .15s;
+  }
+  .xlsx-drop:hover, .xlsx-drop.dragover{border-color:var(--vermilion);background:var(--hover-tint);}
+  .xlsx-drop .drop-title{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+  .xlsx-drop.staged{border-style:solid;border-color:var(--seal);}
+  .xlsx-drop .staged-file{font-size:14px;font-weight:600;color:var(--seal);margin-bottom:6px;}
+  .xlsx-drop .staged-detail{font-size:12px;color:var(--ink-soft);line-height:1.8;}
+  .hint{font-size:12px;color:var(--ink-soft);}
+
+  /* search & replace bar */
+  .sr-bar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin-bottom:14px;padding:10px 14px;
+    border:1px solid var(--line);border-radius:var(--radius);background:var(--paper-card);
+  }
+  .sr-bar .sr-label{font-size:12px;color:var(--ink-soft);white-space:nowrap;}
+
+  /* 進度條（翻譯進度／校對進度，內嵌於目前檔案情境列） */
+  .progress-row{display:flex;align-items:center;gap:10px;}
+  .progress-label{font-size:12px;color:var(--ink-soft);white-space:nowrap;letter-spacing:.03em;}
+  .progress-track{flex:1;height:8px;border-radius:10px;background:var(--hover-tint);overflow:hidden;}
+  .progress-fill{height:100%;border-radius:10px;width:0%;transition:width .25s;}
+  .progress-fill.fill-translate{background:var(--progress-translate);}
+  .progress-fill.fill-confirm{background:var(--progress-confirm);}
+  .progress-pct{font-size:12px;font-weight:600;color:var(--ink);min-width:38px;text-align:right;}
+
+  /* 快速置頂／置底膠囊（貼齊內容區右緣外側，僅專案管理區/翻譯工作區顯示） */
+  .scroll-capsule{
+    position:fixed;right:max(12px, calc((100vw - 1180px) / 2 - 40px));
+    top:50%;transform:translateY(-50%);z-index:80;
+    display:none;flex-direction:column;
+    background:var(--paper-card);border:1px solid var(--line);border-radius:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,.14);overflow:hidden;
+  }
+  .scroll-capsule.show{display:flex;}
+  .scroll-capsule button{
+    border:none;background:transparent;color:var(--ink);cursor:pointer;
+    padding:10px 8px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;
+    transition:background .15s, color .15s;
+  }
+  .scroll-capsule button:hover{background:var(--hover-tint);color:var(--vermilion);}
+  .scroll-capsule button:first-child{border-bottom:1px solid var(--line);}
+  .sr-bar input{
+    border:1px solid var(--line);border-radius:4px;padding:6px 10px;
+    font-size:12px;background:var(--surface-input);color:var(--ink);
+    font-family:"Noto Sans TC",sans-serif;width:140px;
+  }
+  .sr-bar input:focus{outline:none;border-color:var(--vermilion);}
+  .sr-bar .sr-arrow{color:var(--ink-soft);font-size:12px;}
+  .sr-count{font-size:12px;color:var(--seal);font-weight:600;white-space:nowrap;}
+
+  /* view toolbar / doc context bar */
+  .view-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+  .view-toolbar .hint{flex:1;min-width:160px;}
+  .doc-context-bar{
+    display:flex;flex-direction:column;gap:10px;
+    margin-bottom:14px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--paper-card);font-size:14px;
+  }
+  .doc-context-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .doc-context-bar .doc-name{font-family:"Noto Serif TC",serif;font-weight:700;color:var(--ink);}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    font-family:"Noto Sans TC",sans-serif;font-size:14px;font-weight:600;
+    border:1px solid var(--accent-strong);background:var(--accent-strong);color:var(--accent-strong-text);
+    padding:8px 16px;border-radius:4px;cursor:pointer;letter-spacing:.02em;
+    transition:opacity .15s;box-sizing:border-box;
+  }
+  .btn:hover{opacity:.82;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn:disabled:hover{opacity:.4;}
+  .btn.outline{background:transparent;color:var(--ink);border:1px solid var(--line);}
+  .btn.outline:hover{border-color:var(--vermilion);opacity:1;}
+  .btn.vermilion{background:var(--vermilion);border-color:var(--vermilion);color:#fff;}
+  .btn.small{padding:6px 12px;font-size:12px;}
+
+  /* empty state */
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--ink-soft);
+    font-family:"Noto Serif TC",serif;font-size:14px;
+  }
+
+  /* segment row (flex-based so view modes can reflow without re-rendering) */
+  .seg{
+    display:flex;
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--paper-card);margin-bottom:12px;overflow:hidden;
+  }
+  .seg-num{
+    width:calc(42px * var(--ui-pad-scale));flex-shrink:0;
+    background:var(--hover-tint);
+    display:flex;align-items:flex-start;justify-content:center;
+    padding-top:14px;border-right:1px solid var(--line);
+  }
+  .seg-num .badge{
+    width:24px;height:24px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Noto Serif TC",serif;font-weight:700;font-size:12px;
+    border:2px solid var(--vermilion);color:var(--vermilion);background:transparent;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .seg.confirmed .seg-num .badge{background:var(--seal);border-color:var(--seal);color:#fff;}
+  .seg-body{flex:1;display:flex;min-width:0;}
+  .seg-src, .seg-tgt{padding:calc(14px * var(--text-scale)) calc(16px * var(--text-scale));flex:1;min-width:0;}
+  .seg-src{border-right:1px solid var(--line);position:relative;}
+  .seg-src .label, .seg-tgt .label{font-size:10px;color:var(--ink-soft);letter-spacing:.08em;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  .src-text{
+    font-family:"Noto Serif JP","Noto Serif TC",serif;font-size:calc(16px * var(--text-scale));line-height:2;color:var(--ink);
+    user-select:text;white-space:pre-wrap;
+  }
+  .term-hit{
+    background:var(--vermilion-soft);border-bottom:2px dotted var(--vermilion);
+    cursor:pointer;padding:0 2px;border-radius:2px;
+  }
+  .term-hit:hover{background:var(--vermilion-soft2);}
+
+  /* ---- 翻譯記憶側邊欄 ---- */
+  .tm-sidebar{
+    --side-scale:1;
+    position:fixed;top:0;right:0;bottom:0;width:300px;z-index:70;
+    background:var(--paper-card);border-left:1px solid var(--line);
+    box-shadow:-6px 0 20px rgba(0,0,0,.12);
+    transform:translateX(100%);transition:transform .22s ease;
+    display:none;flex-direction:column;
+  }
+  .tm-sidebar.visible{display:flex;}
+  .tm-sidebar.open{transform:translateX(0);}
+  .tm-sidebar-header{
+    padding:14px 16px;border-bottom:1px solid var(--line);
+    font-family:"Noto Serif TC",serif;font-weight:700;font-size:14px;color:var(--ink);
+    display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
+  }
+  .side-scale-btn{
+    font-family:"Noto Sans TC",sans-serif;font-size:10px;font-weight:600;
+    background:transparent;border:1px solid var(--line);color:var(--ink);
+    padding:2px 8px;border-radius:10px;cursor:pointer;
+  }
+  .side-scale-btn:hover{border-color:var(--vermilion);}
+  .tm-tabs{display:flex;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .tm-tabs button{
+    flex:1;background:none;border:none;cursor:pointer;
+    font-family:"Noto Serif TC",serif;font-size:12px;color:var(--ink-soft);
+    padding:10px 4px;border-bottom:2px solid transparent;
+  }
+  .tm-tabs button.active{color:var(--ink);border-bottom-color:var(--vermilion);font-weight:600;}
+  .tm-search{
+    width:100%;border:1px solid var(--line);border-radius:4px;padding:8px 10px;
+    font-size:12px;background:var(--surface-input);color:var(--ink);
+    font-family:"Noto Sans TC",sans-serif;margin-bottom:12px;
+  }
+  .tm-search:focus{outline:none;border-color:var(--vermilion);}
+  .tm-sidebar-body{flex:1;overflow-y:auto;padding:12px;}
+  .tm-sidebar-empty{
+    text-align:center;padding:40px 16px;color:var(--ink-soft);
+    font-family:"Noto Serif TC",serif;font-size:12px;line-height:1.8;
+  }
+  .tm-card{
+    border:1px solid var(--line);border-radius:6px;background:var(--surface-input);
+    margin-bottom:12px;overflow:hidden;
+  }
+  .tm-card-src{
+    padding:10px 12px;border-bottom:1px solid var(--line);
+    font-family:"Noto Serif JP","Noto Serif TC",serif;font-size:calc(12px * var(--side-scale));line-height:1.8;
+    color:var(--ink);background:var(--hover-tint);
+  }
+  .tm-card-src .mini-label, .tm-card-tgt .mini-label{
+    display:block;font-size:10px;color:var(--ink-soft);letter-spacing:.08em;margin-bottom:4px;
+    font-family:"Noto Sans TC",sans-serif;
+  }
+  .tm-card-tgt{padding:10px 12px;}
+  .tm-card-tgt textarea{
+    width:100%;min-height:48px;resize:none;overflow-y:hidden;
+    font-family:"Noto Sans TC",sans-serif;font-size:calc(12px * var(--side-scale));line-height:1.8;
+    border:1px solid var(--line);border-radius:4px;padding:6px 8px;
+    background:var(--surface-input);color:var(--ink);
+  }
+  .tm-card-tgt textarea:focus{outline:none;border-color:var(--vermilion);}
+  .tm-card-foot{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:6px 12px 10px;font-size:10px;color:var(--ink-soft);
+  }
+  .tm-card-foot .tm-pct{
+    font-weight:700;padding:2px 8px;border-radius:10px;
+    background:var(--seal-soft);color:var(--seal);
+  }
+  .tm-handle{
+    position:fixed;right:0;top:38%;z-index:71;
+    writing-mode:vertical-rl;letter-spacing:.2em;
+    background:var(--seal);color:#fff;border:none;cursor:pointer;
+    padding:16px 6px;border-radius:6px 0 0 6px;font-size:12px;font-weight:600;
+    font-family:"Noto Sans TC",sans-serif;box-shadow:-2px 0 8px rgba(0,0,0,.2);
+    display:none;transition:right .22s ease;
+  }
+  .tm-handle.visible{display:block;}
+  .tm-handle.shifted{right:300px;}
+  #tm-handle-search{top:56%;background:var(--vermilion);}
+
+  /* ---- 頁面檢視側邊欄（左側） ---- */
+  .pv-sidebar{
+    --side-scale:1;
+    position:fixed;top:0;left:0;bottom:0;width:300px;z-index:70;
+    background:var(--paper-card);border-right:1px solid var(--line);
+    box-shadow:6px 0 20px rgba(0,0,0,.12);
+    transform:translateX(-100%);transition:transform .22s ease;
+    display:none;flex-direction:column;
+  }
+  .pv-sidebar.visible{display:flex;}
+  .pv-sidebar.open{transform:translateX(0);}
+  .pv-sidebar-header{
+    padding:14px 16px;border-bottom:1px solid var(--line);
+    font-family:"Noto Serif TC",serif;font-weight:700;font-size:14px;color:var(--ink);
+    display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
+  }
+  .pv-tabs{display:flex;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .pv-tabs button{
+    flex:1;background:none;border:none;cursor:pointer;
+    font-family:"Noto Serif TC",serif;font-size:12px;color:var(--ink-soft);
+    padding:10px 4px;border-bottom:2px solid transparent;
+  }
+  .pv-tabs button.active{color:var(--ink);border-bottom-color:var(--vermilion);font-weight:600;}
+  .pv-body{flex:1;overflow-y:auto;padding:12px;}
+  .pv-empty{
+    text-align:center;padding:40px 16px;color:var(--ink-soft);
+    font-family:"Noto Serif TC",serif;font-size:12px;line-height:1.8;
+  }
+  .pv-doc-title{
+    font-family:"Noto Serif TC",serif;font-size:12px;font-weight:700;color:var(--vermilion);
+    margin:4px 2px 8px;letter-spacing:.04em;
+  }
+  .pv-card{
+    border:1px solid var(--line);border-radius:6px;background:var(--surface-input);
+    margin-bottom:12px;overflow:hidden;
+  }
+  .pv-card-src{
+    padding:10px 12px;border-bottom:1px solid var(--line);
+    font-family:"Noto Serif JP","Noto Serif TC",serif;font-size:calc(12px * var(--side-scale));line-height:1.9;
+    color:var(--ink);background:var(--hover-tint);white-space:pre-line;
+  }
+  .pv-card-tgt{
+    padding:10px 12px;font-family:"Noto Sans TC",sans-serif;font-size:calc(12px * var(--side-scale));line-height:1.9;color:var(--ink);white-space:pre-line;
+  }
+  .pv-card-tgt.empty-zh{color:var(--ink-soft);font-style:italic;}
+  .pv-card .mini-label{
+    display:block;font-size:10px;color:var(--ink-soft);letter-spacing:.08em;margin-bottom:4px;
+    font-family:"Noto Sans TC",sans-serif;font-style:normal;
+  }
+  .pv-search{
+    width:100%;border:1px solid var(--line);border-radius:4px;padding:8px 10px;
+    font-size:12px;background:var(--surface-input);color:var(--ink);
+    font-family:"Noto Sans TC",sans-serif;margin-bottom:12px;
+  }
+  .pv-search:focus{outline:none;border-color:var(--vermilion);}
+  .pv-handle{
+    position:fixed;left:0;z-index:71;
+    writing-mode:vertical-rl;letter-spacing:.2em;
+    color:#fff;border:none;cursor:pointer;
+    padding:16px 6px;border-radius:0 6px 6px 0;font-size:12px;font-weight:600;
+    font-family:"Noto Sans TC",sans-serif;box-shadow:2px 0 8px rgba(0,0,0,.2);
+    display:none;transition:left .22s ease;
+  }
+  .pv-handle.visible{display:block;}
+  .pv-handle.shifted{left:300px;}
+  #pv-handle-adjacent{top:38%;background:var(--seal);}
+  #pv-handle-specific{top:56%;background:var(--vermilion);}
+  .tm-handle.active, .pv-handle.active{
+    box-shadow:inset 0 0 0 100px var(--handle-active-tint), 0 0 0 2px var(--paper-card);
+    font-weight:700;
+  }
+
+  .seg-tgt textarea{
+    width:100%;min-height:64px;resize:none;overflow-y:hidden;
+    font-family:"Noto Sans TC",sans-serif;font-size:calc(14px * var(--text-scale));line-height:1.8;
+    border:1px solid var(--line);border-radius:4px;
+    padding:calc(8px * var(--text-scale)) calc(10px * var(--text-scale));background:var(--surface-input);color:var(--ink);
+  }
+  .seg-tgt textarea:focus{outline:none;border-color:var(--vermilion);}
+
+  /* ---- view modes ---- */
+  #seg-list.mode-translate .seg-body{flex-direction:column;}
+  #seg-list.mode-translate .seg-src{border-right:none;border-bottom:1px solid var(--line);}
+
+  #seg-list.mode-readonly .seg-body{flex-direction:column;}
+  #seg-list.mode-readonly .seg-src{display:none;}
+  #seg-list.mode-readonly .seg-tgt .label{display:none;}
+  #seg-list.mode-readonly .seg-tgt{padding:calc(14px * var(--text-scale)) calc(16px * var(--text-scale));}
+  #seg-list.mode-readonly .seg-tgt textarea{
+    border:none;background:transparent;padding:2px 0;font-size:calc(16px * var(--text-scale));line-height:2.1;min-height:auto;
+  }
+
+  @media (max-width:760px){
+    #seg-list.mode-review .seg-body{flex-direction:column;}
+    #seg-list.mode-review .seg-src{border-right:none;border-bottom:1px solid var(--line);}
+  }
+
+  /* tooltip */
+  .term-tip-wrap{position:fixed;z-index:50;display:flex;align-items:center;gap:6px;}
+  .tip-side-actions{display:flex;flex-direction:column;gap:6px;}
+  .tip-side-actions button{
+    width:22px;height:22px;border-radius:50%;flex-shrink:0;padding:0;
+    border:2px solid var(--seal);background:var(--paper-card);color:var(--seal);
+    font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:background .12s,color .12s;box-shadow:0 2px 6px rgba(0,0,0,.18);
+  }
+  .tip-side-actions button:hover{background:var(--seal);color:#fff;}
+  .tip-side-actions .tip-action-del{border-color:var(--vermilion);color:var(--vermilion);}
+  .tip-side-actions .tip-action-del:hover{background:var(--vermilion);color:#fff;}
+  .term-tip{
+    background:var(--tooltip-bg);color:var(--tooltip-text);
+    border-radius:6px;padding:calc(10px * var(--text-scale)) calc(14px * var(--text-scale));font-size:12px;
+    max-width:calc(100vw - 24px);overflow-x:auto;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);pointer-events:auto;
+  }
+  .term-tip .zh-list{display:flex;flex-wrap:nowrap;white-space:nowrap;align-items:center;gap:2px;font-family:"Noto Serif TC",serif;font-size:calc(14px * var(--text-scale));}
+  .term-tip .zh-chip{
+    color:#fff;font-weight:600;cursor:pointer;padding:2px 4px;border-radius:4px;transition:background .12s;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .term-tip .chip-num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;border-radius:4px;flex-shrink:0;
+    background:#ADFF2F;color:#1B1A17;
+    font-size:10px;font-weight:700;font-family:"Noto Sans TC",sans-serif;
+  }
+  .term-tip .zh-chip:hover{background:rgba(255,255,255,0.18);text-decoration:underline;}
+  .term-tip .sep{color:#8A857A;}
+  .modal-confirm-text{font-size:14px;color:var(--ink);line-height:1.6;margin:0 0 4px;}
+  .modal-card.modal-card-center{text-align:center;}
+  .modal-card.modal-card-center h3{text-align:center;color:var(--vermilion);}
+  .modal-card.modal-card-center .modal-confirm-text{text-align:center;color:var(--vermilion);margin-bottom:22px;}
+  .modal-actions.modal-actions-center{justify-content:center;gap:14px;}
+  .btn.large{padding:14px 28px;font-size:14px;border-radius:6px;}
+
+  /* selection -> add term */
+  .selection-add-btn{
+    position:fixed;z-index:60;
+    background:var(--vermilion);color:#fff;border:none;border-radius:4px;
+    padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);font-family:"Noto Sans TC",sans-serif;
+  }
+  .selection-add-btn:hover{opacity:.88;}
+
+  /* modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(20,18,15,0.5);
+    display:flex;align-items:center;justify-content:center;z-index:90;
+  }
+  .modal-card{
+    background:var(--paper-card);border:1px solid var(--line);border-radius:8px;
+    padding:20px 22px;width:360px;max-width:90vw;box-shadow:0 12px 32px rgba(0,0,0,.3);
+  }
+  .modal-card.modal-card-wide{width:440px;}
+  .modal-card h3{margin:0 0 14px;font-family:"Noto Serif TC",serif;font-size:16px;color:var(--ink);}
+  .modal-field{margin-bottom:12px;}
+  .modal-field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  .modal-field input{
+    width:100%;border:1px solid var(--line);border-radius:4px;padding:8px 10px;
+    font-size:14px;background:var(--surface-input);color:var(--ink);font-family:inherit;
+  }
+  .modal-field input:focus{outline:none;border-color:var(--vermilion);}
+  .modal-field.ja input{font-family:"Noto Serif JP","Noto Serif TC",serif;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+
+  /* table (term base / TM list / project) */
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  thead th{
+    text-align:left;font-size:12px;color:var(--ink-soft);letter-spacing:.06em;
+    border-bottom:1px solid var(--line);padding:8px 10px;font-weight:600;white-space:nowrap;
+  }
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:hover{background:var(--hover-tint);}
+  tbody input{
+    width:100%;border:1px solid transparent;background:transparent;
+    font-family:inherit;font-size:14px;color:var(--ink);padding:4px 6px;border-radius:4px;
+  }
+  tbody input:focus{outline:none;border-color:var(--vermilion);background:var(--surface-input);}
+  td.ja input{font-family:"Noto Serif JP","Noto Serif TC",serif;}
+  .source-tag{font-size:12px;color:var(--seal);font-weight:600;white-space:nowrap;}
+  .row-del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:14px;padding:4px;}
+  .row-del:hover{color:var(--vermilion);}
+  .table-toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;flex-wrap:wrap;gap:10px;}
+  .search-box{
+    border:1px solid var(--line);border-radius:4px;padding:8px 12px;font-size:14px;
+    background:var(--surface-input);color:var(--ink);min-width:200px;
+  }
+  .search-box:focus{outline:none;border-color:var(--vermilion);}
+  .table-scroll{padding:0 4px 16px;overflow-x:auto;}
+
+  /* project table specifics */
+  .doc-link{color:var(--vermilion);text-decoration:none;cursor:pointer;font-weight:600;white-space:nowrap;}
+  .doc-link:hover{text-decoration:underline;}
+  .proj-folder-row td{background:var(--hover-tint);font-weight:600;padding:10px 10px;cursor:pointer;}
+  .folder-toggle{display:inline-block;width:14px;color:var(--ink-soft);}
+  .folder-count{color:var(--ink-soft);font-weight:400;margin-left:4px;}
+  .folder-sums{float:right;color:var(--ink-soft);font-weight:400;font-size:12px;}
+  .doc-folder-select{
+    font-size:12px;border:1px solid var(--line);border-radius:4px;background:var(--surface-input);
+    color:var(--ink);padding:2px 4px;margin-right:6px;max-width:96px;
+  }
+
+  /* pagination（術語庫/翻譯記憶共用） */
+  .pagination{display:flex;justify-content:center;align-items:center;gap:8px;padding:14px 0 16px;flex-wrap:wrap;}
+  .page-btn{
+    font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:600;
+    min-width:28px;height:28px;padding:0 8px;
+    border:1px solid var(--line);border-radius:4px;
+    background:transparent;color:var(--ink);cursor:pointer;
+    transition:border-color .15s, background .15s, color .15s;
+  }
+  .page-btn:hover{border-color:var(--vermilion);}
+  .page-btn.active{background:var(--vermilion);border-color:var(--vermilion);color:#fff;cursor:default;}
+
+  input[type=file]{display:none;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="seal-mark">校</span>
+      <div>
+        <h1>校譯台</h1>
+        <div class="tagline">術語比對・翻譯記憶　試作版 Demo</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="stat-line">
+        <span>術語條目　<b id="stat-terms">0</b></span>
+        <span>記憶句段　<b id="stat-tm">0</b></span>
+        <span>文件數　<b id="stat-docs">0</b></span>
+      </div>
+      <button class="icon-btn" id="btn-dark-mode"><i class="bi bi-moon"></i> 暗黑模式</button>
+      <button class="icon-btn" id="btn-text-scale"><i class="bi bi-zoom-in"></i> 防老花模式：1x</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="ingest">入稿工作區</button>
+    <button class="tab-btn" data-tab="projects">專案管理區</button>
+    <button class="tab-btn" data-tab="work">翻譯工作區</button>
+    <button class="tab-btn" data-tab="terms">術語庫</button>
+    <button class="tab-btn" data-tab="tm">翻譯記憶</button>
+  </nav>
+
+  <!-- ===== 入稿工作區 ===== -->
+  <section class="panel active" id="panel-ingest">
+    <div class="card import-box lang-bar">
+      <div class="lang-pair">
+        <label for="src-lang">來源語系</label>
+        <select id="src-lang" class="lang-select">
+          <option value="">請選擇</option>
+          <option value="ja">日文（ja）</option>
+          <option value="zh-TW">繁體中文（zh-TW）</option>
+          <option value="zh-HK">繁體中文（zh-HK）</option>
+          <option value="zh-CN">簡體中文（zh-CN）</option>
+          <option value="zh-SG">簡體中文（zh-SG）</option>
+          <option value="en">英文（en）</option>
+          <option value="en-US">英文（en-US）</option>
+          <option value="en-GB">英文（en-GB）</option>
+          <option value="ko">韓文（ko）</option>
+          <option value="fr">法文（fr）</option>
+          <option value="de">德文（de）</option>
+          <option value="es">西班牙文（es）</option>
+          <option value="vi">越南文（vi）</option>
+          <option value="th">泰文（th）</option>
+        </select>
+        <i class="bi bi-arrow-right lang-arrow"></i>
+        <label for="tgt-lang">目標語系</label>
+        <select id="tgt-lang" class="lang-select">
+          <option value="">請選擇</option>
+          <option value="zh-TW">繁體中文（zh-TW）</option>
+          <option value="zh-HK">繁體中文（zh-HK）</option>
+          <option value="zh-CN">簡體中文（zh-CN）</option>
+          <option value="zh-SG">簡體中文（zh-SG）</option>
+          <option value="en">英文（en）</option>
+          <option value="en-US">英文（en-US）</option>
+          <option value="en-GB">英文（en-GB）</option>
+          <option value="ja">日文（ja）</option>
+          <option value="ko">韓文（ko）</option>
+          <option value="fr">法文（fr）</option>
+          <option value="de">德文（de）</option>
+          <option value="es">西班牙文（es）</option>
+          <option value="vi">越南文（vi）</option>
+          <option value="th">泰文（th）</option>
+        </select>
+        <span class="hint" id="lang-gate-hint">請先選擇來源與目標語系，才能匯入稿件</span>
+      </div>
+    </div>
+    <div class="card import-box">
+      <label>文件名稱</label>
+      <input type="text" id="doc-name-input" class="doc-name-input" placeholder="例：P010（留空則自動命名）">
+      <label id="paste-label">貼上原文，點擊「建立檔案」拆成句子後送入專案管理區</label>
+      <textarea id="raw-input" placeholder="例：迫力のあるポーズを描くには、まず重心の位置を意識することが大切です。パースを正しく取ることで、画面に奥行きが生まれます。"></textarea>
+      <div class="import-row">
+        <span class="hint">以「。！？」與換行自動分段</span>
+        <button class="btn vermilion" id="btn-segment" disabled>建立檔案 <i class="bi bi-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <div class="card import-box">
+      <label>前綴欄位（可留空）</label>
+      <input type="text" id="xlsx-prefix" class="doc-name-input" placeholder="例：迫力（文件名將為「迫力-P030」；留空則直接用分頁名 P030）">
+      <label>拖入 Excel 資料後，點擊「建立檔案」送入專案管理區</label>
+      <div class="xlsx-drop" id="xlsx-drop">
+        <div class="drop-title">拖入 .xlsx 檔案</div>
+        <div>或點擊選擇檔案｜每個分頁（P001、P002…）建立一個文件</div>
+      </div>
+      <input type="file" id="xlsx-file" accept=".xlsx">
+      <div class="import-row">
+        <span class="hint" id="xlsx-col-hint">僅讀取來源／目標語系兩欄；空白模板列自動略過</span>
+        <button class="btn vermilion" id="btn-xlsx-create" disabled>建立檔案 <i class="bi bi-arrow-right"></i></button>
+      </div>
+    </div>
+    <div class="empty">建立後會自動切換到「專案管理區」，請在那裡開啟檔案進行翻譯</div>
+  </section>
+
+  <!-- ===== 專案管理區 ===== -->
+  <section class="panel" id="panel-projects">
+    <div class="card">
+      <div class="table-toolbar">
+        <input class="search-box" id="project-search" placeholder="搜尋檔案名稱…">
+        <button class="btn outline small" id="btn-new-folder">+ 新增資料夾</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>文件名稱</th><th>語言</th><th>原文字數</th><th>譯文字數</th>
+            <th>翻譯進度</th><th>校對進度</th><th>建立時間</th><th>更新時間</th><th></th>
+          </tr></thead>
+          <tbody id="project-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="project-empty" style="display:none;">尚無檔案。請先到「入稿工作區」建立檔案。</div>
+    </div>
+  </section>
+
+  <!-- ===== 翻譯工作區 ===== -->
+  <section class="panel" id="panel-work">
+    <div class="doc-context-bar">
+      <div class="doc-context-top">
+        <span><i class="bi bi-file-earmark-text"></i> 目前檔案：<span class="doc-name" id="current-doc-name">—</span></span>
+        <span style="display:inline-flex;gap:10px;">
+          <button class="icon-btn" id="btn-back-projects"><i class="bi bi-arrow-left"></i> 返回專案管理區</button>
+          <button class="icon-btn" id="btn-reset-confirm"><i class="bi bi-arrow-counterclockwise"></i> 重置確認狀態</button>
+        </span>
+      </div>
+      <div class="progress-row">
+        <span class="progress-label">翻譯進度</span>
+        <div class="progress-track"><div class="progress-fill fill-translate" id="pg-translate"></div></div>
+        <span class="progress-pct" id="pg-translate-pct">0%</span>
+      </div>
+      <div class="progress-row">
+        <span class="progress-label">校對進度</span>
+        <div class="progress-track"><div class="progress-fill fill-confirm" id="pg-confirm"></div></div>
+        <span class="progress-pct" id="pg-confirm-pct">0%</span>
+      </div>
+    </div>
+
+    <div class="view-toolbar">
+      <span class="hint">提示：選取原文中的文字可以新增術語・譯文欄按 Tab 鍵可確認並存入記憶・術語卡片顯示時 Mac 按 Ctrl+N、Win 按 Alt+N 快速帶入</span>
+      <button class="icon-btn" id="btn-view-mode">檢視：校閱模式（左右） <i class="bi bi-arrow-left-right"></i></button>
+    </div>
+
+    <div class="sr-bar">
+      <span class="sr-label">搜尋譯文並取代：</span>
+      <input type="text" id="sr-query" placeholder="搜尋框">
+      <span class="sr-arrow"><i class="bi bi-arrow-right"></i></span>
+      <input type="text" id="sr-replace" placeholder="取代為…">
+      <button class="btn small vermilion" id="sr-replace-btn">取代</button>
+      <button class="btn small outline" id="sr-undo-btn">復原</button>
+      <span class="sr-count" id="sr-count"></span>
+    </div>
+
+    <div id="seg-list" class="mode-review"></div>
+    <div class="empty" id="seg-empty">尚未開啟任何檔案。請先到「專案管理區」開啟一個檔案。</div>
+
+    <div class="import-row" style="margin-top:10px;" id="export-row">
+      <span class="hint">完成的句段可匯出，銜接後續排版流程</span>
+      <button class="btn outline small" id="btn-export-work">匯出 JSON</button>
+    </div>
+  </section>
+
+  <!-- ===== 術語庫 ===== -->
+  <section class="panel" id="panel-terms">
+    <div class="card">
+      <div class="table-toolbar">
+        <input class="search-box" id="term-search" placeholder="搜尋原文或譯名…">
+        <div style="display:flex;gap:16px;">
+          <button class="btn outline small" id="btn-add-term">+ 新增詞條</button>
+          <button class="btn outline small" id="btn-export-terms">匯出 JSON</button>
+          <label class="btn outline small" style="margin:0;">
+            匯入 JSON<input type="file" id="file-import-terms" accept="application/json">
+          </label>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th style="width:24%">原文</th><th style="width:24%">譯名（可用「;」並列多個）</th><th style="width:110px">語言</th><th style="width:80px">出處</th><th>備註</th><th style="width:36px"></th></tr></thead>
+          <tbody id="term-tbody"></tbody>
+        </table>
+      </div>
+      <div id="term-pagination"></div>
+    </div>
+  </section>
+
+  <!-- ===== 翻譯記憶 ===== -->
+  <section class="panel" id="panel-tm">
+    <div class="card">
+      <div class="table-toolbar">
+        <input class="search-box" id="tm-search" placeholder="搜尋原文或譯文…">
+        <div style="display:flex;gap:16px;">
+          <button class="btn outline small" id="btn-export-tm">匯出 JSON</button>
+          <label class="btn outline small" style="margin:0;">
+            匯入 JSON<input type="file" id="file-import-tm" accept="application/json">
+          </label>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th style="width:40%">原文</th><th>譯文</th><th style="width:110px">語言</th><th style="width:80px">出處</th><th style="width:36px"></th></tr></thead>
+          <tbody id="tm-tbody"></tbody>
+        </table>
+      </div>
+      <div id="tm-pagination"></div>
+      <div class="empty" id="tm-empty" style="display:none;">尚無翻譯記憶。在翻譯工作區的譯文欄按 Tab 鍵即可將句段存入記憶。</div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== 翻譯記憶側邊欄 ===== -->
+<button class="tm-handle" id="tm-handle">翻譯記憶</button>
+<button class="tm-handle" id="tm-handle-search">搜尋翻譯記憶</button>
+<aside class="tm-sidebar" id="tm-sidebar">
+  <div class="tm-sidebar-header">
+    <span>翻譯記憶</span>
+    <button class="side-scale-btn" id="tm-scale-btn"><i class="bi bi-zoom-in"></i> 1x</button>
+  </div>
+  <div class="tm-tabs">
+    <button id="tm-tab-similar" class="active">翻譯記憶</button>
+    <button id="tm-tab-search">搜尋翻譯記憶</button>
+  </div>
+  <div class="tm-sidebar-body" id="tm-sidebar-body"></div>
+</aside>
+
+<!-- ===== 頁面檢視側邊欄（左側） ===== -->
+<button class="pv-handle" id="pv-handle-adjacent">上下頁檢視</button>
+<button class="pv-handle" id="pv-handle-specific">跨頁檢視</button>
+<aside class="pv-sidebar" id="pv-sidebar">
+  <div class="pv-sidebar-header">
+    <span>頁面檢視</span>
+    <button class="side-scale-btn" id="pv-scale-btn"><i class="bi bi-zoom-in"></i> 1x</button>
+  </div>
+  <div class="pv-tabs">
+    <button id="pv-tab-adjacent" class="active">上下頁檢視</button>
+    <button id="pv-tab-specific">跨頁檢視</button>
+  </div>
+  <div class="pv-body" id="pv-body"></div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ---------------- 狀態（全部存在記憶體中，重新整理頁面即清空） ---------------- */
+let termBase = [
+  {id:cid(), ja:"迫力", zh:"魄力;張力;氣勢", note:"", source:"範例"},
+  {id:cid(), ja:"パース", zh:"透視", note:"也作「透視法」", source:"範例"},
+  {id:cid(), ja:"エフェクト", zh:"特效", note:"", source:"範例"},
+  {id:cid(), ja:"ライティング", zh:"打光", note:"", source:"範例"},
+  {id:cid(), ja:"構図", zh:"構圖", note:"", source:"範例"},
+  {id:cid(), ja:"デッサン", zh:"素描", note:"", source:"範例"},
+  {id:cid(), ja:"遠近法", zh:"透視法", note:"", source:"範例"},
+  {id:cid(), ja:"質感", zh:"質感", note:"", source:"範例"},
+  {id:cid(), ja:"重心", zh:"重心", note:"", source:"範例"},
+];
+
+let tmSegments = [
+  {id:cid(), ja:"迫力のあるポーズを描くには、まず重心の位置を意識することが大切です。", zh:"要畫出具有魄力的姿勢，首先必須留意重心的位置。", source:"範例"},
+  {id:cid(), ja:"パースを正しく取ることで、画面に奥行きが生まれます。", zh:"正確掌握透視，畫面就會產生景深。", source:"範例"},
+];
+
+let folders = [];     // {id, name}
+let documents = [];   // {id, name, folderId, srcLang, tgtLang, segments:[{id,ja,zh,confirmed,tmId}], createdAt, updatedAt}
+
+/* ---- 語系配對輔助（嚴格隔離：TM/術語只在同配對下比對與顯示） ---- */
+function docPair(doc){
+  return { src: (doc && doc.srcLang) || 'ja', tgt: (doc && doc.tgtLang) || 'zh-TW' };
+}
+function samePair(rec, doc){
+  const p = docPair(doc);
+  return ((rec.srcLang||'ja') === p.src) && ((rec.tgtLang||'zh-TW') === p.tgt);
+}
+/* 舊資料（無語系欄位）一律視為 ja→zh-TW */
+[termBase, tmSegments].forEach(arr=>arr.forEach(r=>{
+  r.srcLang = r.srcLang || 'ja';
+  r.tgtLang = r.tgtLang || 'zh-TW';
+}));
+let currentDocId = null;
+let collapsedFolders = new Set();
+
+const VIEW_MODES = [
+  {key:'review', label:'校閱模式（左右）'},
+  {key:'translate', label:'翻譯模式（上下）'},
+  {key:'readonly', label:'純譯文模式'}
+];
+let viewModeIdx = 0;
+let darkMode = false;
+
+/* ---------------- 分頁（術語庫/翻譯記憶，每頁 10 筆） ---------------- */
+const PAGE_SIZE = 10;
+let termPage = 1;
+let tmPage = 1;
+
+function clampPage(page, totalItems){
+  const pages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  return Math.min(Math.max(1, page), pages);
+}
+function paginationHtml(totalItems, page){
+  const pages = Math.ceil(totalItems / PAGE_SIZE);
+  if(pages <= 1) return '';
+  let out = '<div class="pagination">';
+  for(let i=1; i<=pages; i++){
+    out += `<button class="page-btn${i===page?' active':''}" data-page="${i}">${i}</button>`;
+  }
+  return out + '</div>';
+}
+
+function cid(){ return Math.random().toString(36).slice(2,10); }
+
+/* ---------------- 譯文框自動撐高（原文幾行、譯文框至少撐開對應高度） ---------------- */
+function autoGrow(ta){
+  ta.style.height = 'auto';
+  ta.style.height = (ta.scrollHeight + 2) + 'px';   // +2 補上下 1px 邊框
+}
+function autoGrowAll(selector){
+  document.querySelectorAll(selector).forEach(autoGrow);
+}
+function getCurrentDoc(){ return documents.find(d=>d.id===currentDocId) || null; }
+
+function fmtDate(ts){
+  if(!ts) return '—';
+  const d = new Date(ts);
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const pad = n => String(n).padStart(2,'0');
+  return `${months[d.getMonth()]}-${pad(d.getDate())}-${String(d.getFullYear()).slice(-2)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function docStats(doc){
+  let jaChars=0, zhChars=0, draftCount=0, confirmedCount=0;
+  doc.segments.forEach(s=>{
+    jaChars += s.ja.replace(/\s/g,'').length;
+    zhChars += (s.zh||'').replace(/\s/g,'').length;
+    if((s.zh||'').trim()) draftCount++;
+    if(s.confirmed) confirmedCount++;
+  });
+  const total = doc.segments.length;
+  return {
+    jaChars, zhChars,
+    draftPct: total ? Math.round(draftCount/total*100) : 0,
+    confirmedPct: total ? Math.round(confirmedCount/total*100) : 0
+  };
+}
+
+/* ---------------- 分段：依日文句末標點與換行切句 ---------------- */
+function segmentText(text){
+  const parts = text.split(/(?<=[。！？\n])/).map(s=>s.trim()).filter(Boolean);
+  return parts;
+}
+
+/* ---------------- 字元 bigram Jaccard 相似度（簡易 TM 比對率） ---------------- */
+function bigrams(str){
+  const s = str.replace(/\s/g,'');
+  const set = new Set();
+  for(let i=0;i<s.length-1;i++) set.add(s.slice(i,i+2));
+  if(set.size===0 && s.length>0) set.add(s);
+  return set;
+}
+function similarity(a,b){
+  const A = bigrams(a), B = bigrams(b);
+  if(A.size===0 || B.size===0) return 0;
+  let inter=0;
+  for(const g of A) if(B.has(g)) inter++;
+  const union = A.size + B.size - inter;
+  return union===0 ? 0 : inter/union;
+}
+function bestTM(ja){
+  let best=null, bestScore=0;
+  for(const t of tmSegments){
+    const sc = similarity(ja, t.ja);
+    if(sc>bestScore){ bestScore=sc; best=t; }
+  }
+  return best ? {match:best, score:bestScore} : null;
+}
+
+/* ---------------- 術語比對：在原文中找出所有命中的詞條（最長優先、不重疊） ---------------- */
+function findTermHits(text){
+  const hits = [];
+  const doc = getCurrentDoc();
+  const sorted = termBase.filter(t=>samePair(t, doc)).sort((a,b)=>b.ja.length-a.ja.length);
+  const used = new Array(text.length).fill(false);
+  for(const term of sorted){
+    if(!term.ja) continue;
+    let idx = 0;
+    while(true){
+      const found = text.indexOf(term.ja, idx);
+      if(found===-1) break;
+      const end = found + term.ja.length;
+      let overlap=false;
+      for(let i=found;i<end;i++) if(used[i]){overlap=true;break;}
+      if(!overlap){
+        hits.push({start:found, end, term});
+        for(let i=found;i<end;i++) used[i]=true;
+      }
+      idx = found + term.ja.length;
+    }
+  }
+  hits.sort((a,b)=>a.start-b.start);
+  return hits;
+}
+
+function renderHighlighted(text, segId){
+  const hits = findTermHits(text);
+  if(hits.length===0) return escapeHtml(text);
+  let out = '', cursor = 0;
+  for(const h of hits){
+    out += escapeHtml(text.slice(cursor, h.start));
+    out += `<span class="term-hit" data-seg="${segId}" data-termid="${h.term.id}" data-ja="${escapeAttr(h.term.ja)}" data-zh="${escapeAttr(h.term.zh)}">${escapeHtml(text.slice(h.start,h.end))}</span>`;
+    cursor = h.end;
+  }
+  out += escapeHtml(text.slice(cursor));
+  return out;
+}
+
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
+
+/* ---------------- 渲染：翻譯工作區句段 ---------------- */
+function renderSegments(){
+  const doc = getCurrentDoc();
+  const list = document.getElementById('seg-list');
+  const empty = document.getElementById('seg-empty');
+  const exportRow = document.getElementById('export-row');
+  const ctxName = document.getElementById('current-doc-name');
+  list.innerHTML='';
+
+  if(!doc){
+    ctxName.textContent='—';
+    empty.textContent='尚未開啟任何檔案。請先到「專案管理區」開啟一個檔案。';
+    empty.style.display='block';
+    exportRow.style.display='none';
+    updateStats();
+    return;
+  }
+  ctxName.textContent = doc.name;
+
+  if(doc.segments.length===0){
+    empty.textContent='這個檔案沒有任何句段。';
+    empty.style.display='block';
+    exportRow.style.display='none';
+    updateStats();
+    return;
+  }
+  empty.style.display='none';
+  exportRow.style.display='flex';
+
+  const kw = srQuery.trim();
+  let anyShown = false;
+  doc.segments.forEach((seg,i)=>{
+    if(kw && !(seg.zh||'').includes(kw)) return;
+    anyShown = true;
+    const row = document.createElement('div');
+    row.className = 'seg' + (seg.confirmed ? ' confirmed' : '');
+    row.innerHTML = `
+      <div class="seg-num"><span class="badge">${i+1}</span></div>
+      <div class="seg-body">
+        <div class="seg-src">
+          <div class="label"><span>原文 ${langName(doc.srcLang||'ja')}（${escapeHtml(doc.srcLang||'ja')}）</span></div>
+          <div class="src-text">${renderHighlighted(seg.ja, seg.id)}</div>
+        </div>
+        <div class="seg-tgt">
+          <div class="label"><span>譯文 ${langName(doc.tgtLang||'zh-TW')}（${escapeHtml(doc.tgtLang||'zh-TW')}）</span></div>
+          <textarea data-seg="${seg.id}" placeholder="輸入譯文，按 Tab 確認並存入記憶…">${escapeHtml(seg.zh||'')}</textarea>
+        </div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+  if(kw && !anyShown){
+    list.innerHTML = '<div class="empty">沒有譯文包含「' + escapeHtml(kw) + '」的句段。</div>';
+  }
+  autoGrowAll('#seg-list textarea');
+  updateStats();
+}
+
+/* ---------------- 渲染：專案管理區 ---------------- */
+function renderProjects(){
+  const tbody = document.getElementById('project-tbody');
+  const kw = document.getElementById('project-search').value.trim().toLowerCase();
+  const empty = document.getElementById('project-empty');
+  tbody.innerHTML='';
+
+  if(documents.length===0){
+    empty.style.display='block';
+    updateStats();
+    return;
+  }
+  empty.style.display='none';
+
+  function docRowHtml(doc){
+    const st = docStats(doc);
+    const opts = ['<option value="">未分類</option>']
+      .concat(folders.map(f=>`<option value="${f.id}" ${doc.folderId===f.id?'selected':''}>${escapeHtml(f.name)}</option>`));
+    return `
+      <tr>
+        <td><a class="doc-link" data-docid="${doc.id}"><i class="bi bi-file-earmark-text"></i> ${escapeHtml(doc.name)}</a></td>
+        <td>${escapeHtml(doc.srcLang||'ja')}&nbsp;▶&nbsp;${escapeHtml(doc.tgtLang||'zh-TW')}</td>
+        <td>${st.jaChars}</td>
+        <td>${st.zhChars}</td>
+        <td>${st.draftPct}%</td>
+        <td>${st.confirmedPct}%</td>
+        <td>${fmtDate(doc.createdAt)}</td>
+        <td>${fmtDate(doc.updatedAt)}</td>
+        <td style="white-space:nowrap;">
+          <select class="doc-folder-select" data-docid="${doc.id}">${opts.join('')}</select>
+          <button class="row-del" data-docid="${doc.id}" title="刪除檔案"><i class="bi bi-x-lg"></i></button>
+        </td>
+      </tr>`;
+  }
+
+  if(kw){
+    documents.filter(d=>d.name.toLowerCase().includes(kw))
+      .forEach(d=> tbody.insertAdjacentHTML('beforeend', docRowHtml(d)));
+    updateStats();
+    return;
+  }
+
+  folders.forEach(f=>{
+    const docsInFolder = documents.filter(d=>d.folderId===f.id);
+    const collapsed = collapsedFolders.has(f.id);
+    const sumJa = docsInFolder.reduce((a,d)=>a+docStats(d).jaChars,0);
+    const sumZh = docsInFolder.reduce((a,d)=>a+docStats(d).zhChars,0);
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr class="proj-folder-row" data-folderid="${f.id}">
+        <td colspan="9">
+          <span class="folder-toggle">${collapsed?'▸':'▾'}</span>
+          <i class="bi bi-folder"></i> ${escapeHtml(f.name)}<span class="folder-count">(${docsInFolder.length})</span>
+          <span class="folder-sums">原文 ${sumJa}・譯文 ${sumZh}</span>
+          <button class="row-del folder-del" data-folderid="${f.id}" title="刪除資料夾（檔案移至未分類）"><i class="bi bi-x-lg"></i></button>
+        </td>
+      </tr>`);
+    if(!collapsed) docsInFolder.forEach(d=> tbody.insertAdjacentHTML('beforeend', docRowHtml(d)));
+  });
+
+  documents.filter(d=>!d.folderId).forEach(d=> tbody.insertAdjacentHTML('beforeend', docRowHtml(d)));
+  updateStats();
+}
+
+/* ---------------- 渲染：術語庫表格 ---------------- */
+function renderTermTable(){
+  const tbody = document.getElementById('term-tbody');
+  const kw = document.getElementById('term-search').value.trim();
+  tbody.innerHTML='';
+  const filtered = termBase.filter(t => !kw || t.ja.includes(kw) || t.zh.includes(kw));
+  termPage = clampPage(termPage, filtered.length);
+  filtered
+    .slice((termPage-1)*PAGE_SIZE, termPage*PAGE_SIZE)
+    .forEach(t=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ja"><input value="${escapeAttr(t.ja)}" data-field="ja" data-id="${t.id}"></td>
+        <td><input value="${escapeAttr(t.zh)}" data-field="zh" data-id="${t.id}" placeholder="魄力;張力;氣勢"></td>
+        <td><span class="source-tag">${escapeHtml(t.srcLang||'ja')}&nbsp;▶&nbsp;${escapeHtml(t.tgtLang||'zh-TW')}</span></td>
+        <td><span class="source-tag">${escapeHtml(t.source||'—')}</span></td>
+        <td><input value="${escapeAttr(t.note||'')}" data-field="note" data-id="${t.id}" placeholder="備註"></td>
+        <td><button class="row-del" data-id="${t.id}" title="刪除"><i class="bi bi-x-lg"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  document.getElementById('term-pagination').innerHTML = paginationHtml(filtered.length, termPage);
+  updateStats();
+}
+
+/* ---------------- 渲染：TM 表格 ---------------- */
+function renderTMTable(){
+  const tbody = document.getElementById('tm-tbody');
+  const kw = document.getElementById('tm-search').value.trim();
+  const empty = document.getElementById('tm-empty');
+  tbody.innerHTML='';
+  const filtered = tmSegments.filter(t => !kw || t.ja.includes(kw) || t.zh.includes(kw));
+  empty.style.display = tmSegments.length===0 ? 'block' : 'none';
+  tmPage = clampPage(tmPage, filtered.length);
+  filtered.slice((tmPage-1)*PAGE_SIZE, tmPage*PAGE_SIZE).forEach(t=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-family:'Noto Serif JP','Noto Serif TC',serif;">${escapeHtml(t.ja)}</td>
+      <td>${escapeHtml(t.zh)}</td>
+      <td><span class="source-tag">${escapeHtml(t.srcLang||'ja')}&nbsp;▶&nbsp;${escapeHtml(t.tgtLang||'zh-TW')}</span></td>
+      <td><span class="source-tag">${escapeHtml(t.source||'—')}</span></td>
+      <td><button class="row-del" data-tmid="${t.id}" title="刪除"><i class="bi bi-x-lg"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tm-pagination').innerHTML = paginationHtml(filtered.length, tmPage);
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('stat-terms').textContent = termBase.length;
+  document.getElementById('stat-tm').textContent = tmSegments.length;
+  document.getElementById('stat-docs').textContent = documents.length;
+  updateWorkProgress();
+}
+
+/* 翻譯工作區進度條：翻譯進度（有譯文即計）／校對進度（Tab 確認才計） */
+function updateWorkProgress(){
+  const doc = getCurrentDoc();
+  const st = doc ? docStats(doc) : {draftPct:0, confirmedPct:0};
+  document.getElementById('pg-translate').style.width = st.draftPct + '%';
+  document.getElementById('pg-translate-pct').textContent = st.draftPct + '%';
+  document.getElementById('pg-confirm').style.width = st.confirmedPct + '%';
+  document.getElementById('pg-confirm-pct').textContent = st.confirmedPct + '%';
+}
+
+/* ---------------- 搜尋譯文並取代（僅作用於目前檔案） ---------------- */
+let srQuery = '';
+let srUndoSnapshot = null;
+
+function srCountOccurrences(){
+  const doc = getCurrentDoc();
+  if(!doc || !srQuery) return 0;
+  let n = 0;
+  doc.segments.forEach(seg=>{
+    if(!(seg.zh||'')) return;
+    n += seg.zh.split(srQuery).length - 1;
+  });
+  return n;
+}
+function updateSRCount(){
+  const el = document.getElementById('sr-count');
+  el.textContent = srQuery ? ('命中 ' + srCountOccurrences() + ' 處') : '';
+}
+
+document.getElementById('sr-query').addEventListener('input', (e)=>{
+  srQuery = e.target.value;
+  updateSRCount();
+  renderSegments();
+});
+
+document.getElementById('sr-replace-btn').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc){ alert('請先開啟一個檔案'); return; }
+  if(!srQuery){ alert('請先在搜尋框輸入要搜尋的譯文字詞'); return; }
+  const n = srCountOccurrences();
+  if(n === 0){ alert('目前檔案的譯文中找不到「' + srQuery + '」'); return; }
+  const replaceWith = document.getElementById('sr-replace').value;
+  openSRConfirmModal(n, replaceWith);
+});
+
+function openSRConfirmModal(n, replaceWith){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-center">
+      <h3>取代譯文</h3>
+      <p class="modal-confirm-text">有 ${n} 處會被取代，句段會退回未確認狀態。</p>
+      <div class="modal-actions modal-actions-center">
+        <button class="btn outline large" id="sr-cancel">取消取代</button>
+        <button class="btn vermilion large" id="sr-confirm">確定取代</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('sr-cancel').addEventListener('click', ()=>overlay.remove());
+  document.getElementById('sr-confirm').addEventListener('click', ()=>{
+    executeSearchReplace(replaceWith);
+    overlay.remove();
+  });
+}
+
+function executeSearchReplace(replaceWith){
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  const snapshot = [];
+  doc.segments.forEach(seg=>{
+    if((seg.zh||'').includes(srQuery)){
+      snapshot.push({segId:seg.id, zh:seg.zh, confirmed:seg.confirmed, tmId:seg.tmId});
+      seg.zh = seg.zh.split(srQuery).join(replaceWith);
+      // 與第十版一致：受影響句段退回未確認、解除TM參照，TM紀錄本身保留不動
+      seg.confirmed = false;
+      seg.tmId = null;
+    }
+  });
+  srUndoSnapshot = {docId:doc.id, items:snapshot};
+  doc.updatedAt = Date.now();
+  updateSRCount();
+  renderSegments();
+  renderProjects();
+}
+
+document.getElementById('sr-undo-btn').addEventListener('click', ()=>{
+  if(!srUndoSnapshot){ alert('目前沒有可復原的取代'); return; }
+  const doc = documents.find(d=>d.id===srUndoSnapshot.docId);
+  if(!doc){ alert('找不到原檔案，無法復原'); srUndoSnapshot=null; return; }
+  srUndoSnapshot.items.forEach(item=>{
+    const seg = doc.segments.find(s=>s.id===item.segId);
+    if(seg){ seg.zh = item.zh; seg.confirmed = item.confirmed; seg.tmId = item.tmId; }
+  });
+  doc.updatedAt = Date.now();
+  srUndoSnapshot = null;
+  updateSRCount();
+  renderSegments();
+  renderProjects();
+});
+
+/* ---------------- 檢視模式切換 ---------------- */
+function applyViewMode(){
+  const mode = VIEW_MODES[viewModeIdx];
+  document.getElementById('seg-list').className = 'mode-' + mode.key;
+  document.getElementById('btn-view-mode').innerHTML = '檢視：' + mode.label + ' <i class="bi bi-arrow-left-right"></i>';
+  autoGrowAll('#seg-list textarea');
+}
+document.getElementById('btn-view-mode').addEventListener('click', ()=>{
+  viewModeIdx = (viewModeIdx + 1) % VIEW_MODES.length;
+  applyViewMode();
+  hideTermTip();
+});
+
+/* ---------------- 暗黑模式切換 ---------------- */
+function applyDarkMode(){
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  document.getElementById('btn-dark-mode').innerHTML = darkMode ? '<i class="bi bi-sun"></i> 亮色模式' : '<i class="bi bi-moon"></i> 暗黑模式';
+}
+document.getElementById('btn-dark-mode').addEventListener('click', ()=>{
+  darkMode = !darkMode;
+  applyDarkMode();
+});
+
+/* ---------------- 防老花模式切換（原文／譯文／術語卡片字級＋內距聯動） ---------------- */
+const TEXT_SCALES = [1, 1.2, 1.4];
+let textScaleIdx = 0;
+function applyTextScale(){
+  const scale = TEXT_SCALES[textScaleIdx];
+  document.documentElement.setAttribute('data-text-scale', String(scale));
+  document.getElementById('btn-text-scale').innerHTML = '<i class="bi bi-zoom-in"></i> 防老花模式：' + scale + 'x';
+  hideTermTip();
+}
+document.getElementById('btn-text-scale').addEventListener('click', ()=>{
+  textScaleIdx = (textScaleIdx + 1) % TEXT_SCALES.length;
+  applyTextScale();
+  autoGrowAll('#seg-list textarea');
+});
+
+/* ---------------- 翻譯記憶側邊欄 ---------------- */
+let tmSidebarPinned = false;
+let lastFocusedSegId = null;
+let tmMode = 'similar';   // 'similar' | 'search'
+let tmSearchQuery = '';
+
+function tmSidebarEls(){
+  return {
+    sidebar: document.getElementById('tm-sidebar'),
+    handle: document.getElementById('tm-handle'),
+    body: document.getElementById('tm-sidebar-body')
+  };
+}
+function updateTMSidebarVisibility(activeTabKey){
+  const {sidebar, handle} = tmSidebarEls();
+  const hSearch = document.getElementById('tm-handle-search');
+  const inWork = activeTabKey === 'work';
+  sidebar.classList.toggle('visible', inWork);
+  handle.classList.toggle('visible', inWork);
+  hSearch.classList.toggle('visible', inWork);
+  if(!inWork){ sidebar.classList.remove('open'); handle.classList.remove('shifted'); hSearch.classList.remove('shifted'); tmSidebarPinned = false; updateHandleActives(); }
+}
+function openTMSidebar(){ 
+  const {sidebar, handle} = tmSidebarEls();
+  sidebar.classList.add('open'); handle.classList.add('shifted');
+  document.getElementById('tm-handle-search').classList.add('shifted');
+}
+function closeTMSidebar(){
+  const {sidebar, handle} = tmSidebarEls();
+  sidebar.classList.remove('open'); handle.classList.remove('shifted');
+  document.getElementById('tm-handle-search').classList.remove('shifted');
+}
+function setTMMode(mode){
+  tmMode = mode;
+  document.getElementById('tm-tab-similar').classList.toggle('active', mode==='similar');
+  document.getElementById('tm-tab-search').classList.toggle('active', mode==='search');
+  renderTMSidebar();
+  updateHandleActives();
+}
+function updateHandleActives(){
+  document.getElementById('tm-handle').classList.toggle('active', tmSidebarPinned && tmMode==='similar');
+  document.getElementById('tm-handle-search').classList.toggle('active', tmSidebarPinned && tmMode==='search');
+  const pvA = document.getElementById('pv-handle-adjacent');
+  const pvS = document.getElementById('pv-handle-specific');
+  if(pvA && pvS && typeof pvSidebarPinned!=='undefined'){
+    pvA.classList.toggle('active', pvSidebarPinned && pvMode==='adjacent');
+    pvS.classList.toggle('active', pvSidebarPinned && pvMode==='specific');
+  }
+}
+
+/* TM卡片HTML（兩種模式共用） */
+function tmCardHtml(t, score){
+  return `
+    <div class="tm-card" data-tmid="${t.id}">
+      <div class="tm-card-src"><span class="mini-label">原文</span>${escapeHtml(t.ja)}</div>
+      <div class="tm-card-tgt">
+        <span class="mini-label">譯文（Tab 更新記憶・Enter 套用至左側）</span>
+        <textarea data-tmid="${t.id}">${escapeHtml(t.zh)}</textarea>
+      </div>
+      <div class="tm-card-foot">
+        <span>出處：${escapeHtml(t.source || '—')}</span>
+        ${score!=null ? `<span class="tm-pct">TM ${Math.round(score*100)}%</span>` : ''}
+      </div>
+    </div>`;
+}
+
+/* 搜尋模式：只重繪結果區，搜尋框常駐（避免中斷輸入法組字） */
+function renderTMSearchResults(){
+  const results = document.getElementById('tm-search-results');
+  if(!results) return;
+  if(!tmSearchQuery.trim()){
+    results.innerHTML = '<div class="tm-sidebar-empty">輸入原文或譯文關鍵字，<br>搜尋翻譯記憶。</div>';
+    return;
+  }
+  const kw = tmSearchQuery.trim();
+  const doc = getCurrentDoc();
+  const seg = doc ? doc.segments.find(s=>s.id===lastFocusedSegId) : null;
+  const found = tmSegments.filter(t=>(!doc || samePair(t, doc)) && (t.ja.includes(kw) || t.zh.includes(kw)));
+  results.innerHTML = found.length
+    ? found.map(t=>tmCardHtml(t, seg ? similarity(seg.ja, t.ja) : null)).join('')
+    : '<div class="tm-sidebar-empty">找不到符合的翻譯記憶。</div>';
+  autoGrowAll('#tm-sidebar-body .tm-card-tgt textarea');
+}
+
+/* 依目前模式渲染：similar＝聚焦句段相似記憶、search＝關鍵字搜尋 */
+function renderTMSidebar(){
+  const {body} = tmSidebarEls();
+  if(tmMode === 'search'){
+    let input = document.getElementById('tm-sidebar-search');
+    if(!input){
+      body.innerHTML = `<input type="text" class="tm-search" id="tm-sidebar-search" placeholder="輸入原文或譯文關鍵字…" value="${escapeAttr(tmSearchQuery)}"><div id="tm-search-results"></div>`;
+      input = document.getElementById('tm-sidebar-search');
+      let composing = false;
+      input.addEventListener('compositionstart', ()=>{ composing = true; });
+      input.addEventListener('compositionend', (e)=>{
+        composing = false;
+        tmSearchQuery = e.target.value;
+        renderTMSearchResults();
+      });
+      input.addEventListener('input', (e)=>{
+        tmSearchQuery = e.target.value;
+        if(!composing) renderTMSearchResults();
+      });
+    }
+    renderTMSearchResults();
+    return;
+  }
+  /* 離開搜尋模式時清掉常駐搜尋框，讓下次進入重新建立 */
+  const doc = getCurrentDoc();
+  const seg = doc ? doc.segments.find(s=>s.id===lastFocusedSegId) : null;
+  if(!seg){
+    body.innerHTML = '<div class="tm-sidebar-empty">點擊左側任一句段的譯文欄，<br>這裡會列出相似的翻譯記憶。</div>';
+    return;
+  }
+  const matches = tmSegments
+    .filter(t=>samePair(t, doc))
+    .map(t=>({t, score: similarity(seg.ja, t.ja)}))
+    .filter(m=>m.score > 0)
+    .sort((a,b)=>b.score - a.score)
+    .slice(0, 8);
+  if(matches.length===0){
+    body.innerHTML = '<div class="tm-sidebar-empty">沒有與這一句相似的翻譯記憶。</div>';
+    return;
+  }
+  body.innerHTML = matches.map(m=>tmCardHtml(m.t, m.score)).join('');
+  autoGrowAll('#tm-sidebar-body .tm-card-tgt textarea');
+}
+
+/* 追蹤左側工作區最後聚焦的句段 */
+document.getElementById('seg-list').addEventListener('focusin', (e)=>{
+  if(e.target.tagName==='TEXTAREA' && e.target.dataset.seg){
+    lastFocusedSegId = e.target.dataset.seg;
+    renderTMSidebar();
+  }
+});
+
+/* 把手：hover 展開對應模式，點擊切換固定/隱藏；點另一把手則切換模式 */
+(function(){
+  const sidebar = document.getElementById('tm-sidebar');
+  function bindTMHandle(mode, handleEl){
+    handleEl.addEventListener('mouseenter', ()=>{
+      if(!tmSidebarPinned){ setTMMode(mode); openTMSidebar(); }
+    });
+    handleEl.addEventListener('click', ()=>{
+      if(tmMode !== mode){
+        setTMMode(mode);
+        tmSidebarPinned = true;
+        openTMSidebar();
+      } else {
+        tmSidebarPinned = !tmSidebarPinned;
+        if(tmSidebarPinned) openTMSidebar(); else closeTMSidebar();
+      }
+      updateHandleActives();
+    });
+  }
+  bindTMHandle('similar', document.getElementById('tm-handle'));
+  bindTMHandle('search', document.getElementById('tm-handle-search'));
+  /* 未固定時，滑鼠離開側邊欄即收合 */
+  sidebar.addEventListener('mouseleave', ()=>{ if(!tmSidebarPinned) closeTMSidebar(); });
+})();
+
+document.getElementById('tm-tab-similar').addEventListener('click', ()=>setTMMode('similar'));
+document.getElementById('tm-tab-search').addEventListener('click', ()=>setTMMode('search'));
+
+/* 側邊欄卡片內：Tab 更新記憶、Enter 套用至左側 */
+document.getElementById('tm-sidebar-body').addEventListener('input', (e)=>{
+  if(e.target.tagName==='TEXTAREA') autoGrow(e.target);
+});
+document.getElementById('tm-sidebar-body').addEventListener('keydown', (e)=>{
+  if(e.target.tagName!=='TEXTAREA') return;
+  const tmId = e.target.dataset.tmid;
+  if(e.key==='Tab'){
+    const t = tmSegments.find(t=>t.id===tmId);
+    if(t && e.target.value.trim()){
+      t.zh = e.target.value;
+      renderTMTable();
+    }
+  }
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(!lastFocusedSegId) return;
+    const doc = getCurrentDoc();
+    if(!doc) return;
+    const seg = doc.segments.find(s=>s.id===lastFocusedSegId);
+    const ta = document.querySelector(`#seg-list textarea[data-seg="${lastFocusedSegId}"]`);
+    if(!seg || !ta) return;
+    seg.zh = e.target.value;
+    ta.value = e.target.value;
+    autoGrow(ta);
+    // 套用即是編輯：已確認句段退回未確認（保留 tmId），需重按 Tab 重新校對
+    if(seg.confirmed){
+      seg.confirmed = false;
+      ta.closest('.seg')?.classList.remove('confirmed');
+      updateStats();
+    }
+    doc.updatedAt = Date.now();
+    ta.focus();
+  }
+});
+
+/* ---------------- 頁面檢視側邊欄（左側） ---------------- */
+let pvSidebarPinned = false;
+let pvMode = 'adjacent';   // 'adjacent' | 'specific'
+let pvSpecificQuery = '';
+
+function openPVSidebar(){
+  document.getElementById('pv-sidebar').classList.add('open');
+  document.getElementById('pv-handle-adjacent').classList.add('shifted');
+  document.getElementById('pv-handle-specific').classList.add('shifted');
+}
+function closePVSidebar(){
+  document.getElementById('pv-sidebar').classList.remove('open');
+  document.getElementById('pv-handle-adjacent').classList.remove('shifted');
+  document.getElementById('pv-handle-specific').classList.remove('shifted');
+}
+function updatePVSidebarVisibility(activeTabKey){
+  const inWork = activeTabKey === 'work';
+  document.getElementById('pv-sidebar').classList.toggle('visible', inWork);
+  document.getElementById('pv-handle-adjacent').classList.toggle('visible', inWork);
+  document.getElementById('pv-handle-specific').classList.toggle('visible', inWork);
+  if(!inWork){ closePVSidebar(); pvSidebarPinned = false; updateHandleActives(); }
+}
+function setPVMode(mode){
+  pvMode = mode;
+  document.getElementById('pv-tab-adjacent').classList.toggle('active', mode==='adjacent');
+  document.getElementById('pv-tab-specific').classList.toggle('active', mode==='specific');
+  renderPVSidebar();
+  updateHandleActives();
+}
+
+/* 唯讀整篇卡片：以檔案為單位，一次性完整顯示整篇原文與譯文 */
+function pvDocCardsHtml(doc, titlePrefix){
+  const fullJa = doc.segments.map(s=>s.ja).join('\n');
+  const zhParts = doc.segments.map(s=>(s.zh && s.zh.trim()) ? s.zh : '（尚未翻譯）');
+  const allEmpty = doc.segments.every(s=>!(s.zh && s.zh.trim()));
+  const fullZh = zhParts.join('\n');
+  return `<div class="pv-doc-title">${titlePrefix}：${escapeHtml(doc.name)}</div>
+    <div class="pv-card">
+      <div class="pv-card-src"><span class="mini-label">原文</span>${escapeHtml(fullJa)}</div>
+      <div class="pv-card-tgt ${allEmpty ? 'empty-zh' : ''}">
+        <span class="mini-label">譯文</span>${escapeHtml(fullZh)}
+      </div>
+    </div>`;
+}
+
+function renderPVSidebar(){
+  const body = document.getElementById('pv-body');
+  if(pvMode === 'adjacent'){
+    const doc = getCurrentDoc();
+    if(!doc){
+      body.innerHTML = '<div class="pv-empty">尚未開啟任何檔案。</div>';
+      return;
+    }
+    const idx = documents.findIndex(d=>d.id===doc.id);
+    const prev = idx > 0 ? documents[idx-1] : null;
+    const next = idx < documents.length-1 ? documents[idx+1] : null;
+    if(!prev && !next){
+      body.innerHTML = '<div class="pv-empty">這是唯一的檔案，<br>沒有上一頁或下一頁可供檢視。</div>';
+      return;
+    }
+    body.innerHTML =
+      (prev ? pvDocCardsHtml(prev, '上一頁') : '<div class="pv-empty">（沒有上一頁）</div>') +
+      (next ? pvDocCardsHtml(next, '下一頁') : '<div class="pv-empty">（沒有下一頁）</div>');
+  } else {
+    let input = document.getElementById('pv-search');
+    if(!input){
+      body.innerHTML = `<input type="text" class="pv-search" id="pv-search" placeholder="輸入檔名、語系代碼或內文…" value="${escapeAttr(pvSpecificQuery)}"><div id="pv-search-results"></div>`;
+      input = document.getElementById('pv-search');
+      let composing = false;
+      input.addEventListener('compositionstart', ()=>{ composing = true; });
+      input.addEventListener('compositionend', (e)=>{
+        composing = false;
+        pvSpecificQuery = e.target.value;
+        renderPVSearchResults();
+      });
+      input.addEventListener('input', (e)=>{
+        pvSpecificQuery = e.target.value;
+        if(!composing) renderPVSearchResults();
+      });
+    }
+    renderPVSearchResults();
+  }
+}
+
+/* 跨頁檢視：只重繪結果區（避免中斷輸入法組字）
+   搜尋跨度：檔名／語系代碼（srcLang、tgtLang）／原文或譯文內容 */
+function renderPVSearchResults(){
+  const results = document.getElementById('pv-search-results');
+  if(!results) return;
+  if(!pvSpecificQuery.trim()){
+    results.innerHTML = '<div class="pv-empty">輸入檔名、語系代碼（如 en、zh-TW）<br>或原文／譯文內容，即可檢視符合的檔案。</div>';
+    return;
+  }
+  const kw = pvSpecificQuery.trim().toLowerCase();
+  const matches = documents.filter(d=>
+    d.name.toLowerCase().includes(kw) ||
+    (d.srcLang||'ja').toLowerCase() === kw ||
+    (d.tgtLang||'zh-TW').toLowerCase() === kw ||
+    d.segments.some(seg=>seg.ja.toLowerCase().includes(kw) || (seg.zh||'').toLowerCase().includes(kw))
+  );
+  // 檔名完全相符者排最前，其次檔名部分相符，內容命中殿後
+  matches.sort((a,b)=>{
+    const rank = d => d.name.toLowerCase()===kw ? 0 : (d.name.toLowerCase().includes(kw) ? 1 : 2);
+    return rank(a) - rank(b);
+  });
+  const MAX = 3;
+  results.innerHTML = matches.length
+    ? matches.slice(0, MAX).map(d=>pvDocCardsHtml(d, '跨頁檢視')).join('')
+      + (matches.length > MAX ? `<div class="pv-empty">還有 ${matches.length - MAX} 個符合的檔案，請輸入更精確的關鍵字。</div>` : '')
+    : '<div class="pv-empty">找不到符合的檔案或內容。</div>';
+}
+
+/* 把手互動：hover 展開對應模式，點擊切換固定/隱藏；點另一把手則切換模式 */
+(function(){
+  const sidebar = document.getElementById('pv-sidebar');
+  const hAdj = document.getElementById('pv-handle-adjacent');
+  const hSpec = document.getElementById('pv-handle-specific');
+  function handleFor(mode, handleEl){
+    handleEl.addEventListener('mouseenter', ()=>{
+      if(!pvSidebarPinned){ setPVMode(mode); openPVSidebar(); }
+    });
+    handleEl.addEventListener('click', ()=>{
+      if(pvMode !== mode){
+        setPVMode(mode);
+        pvSidebarPinned = true;
+        openPVSidebar();
+      } else {
+        pvSidebarPinned = !pvSidebarPinned;
+        if(pvSidebarPinned) openPVSidebar(); else closePVSidebar();
+      }
+      updateHandleActives();
+    });
+  }
+  handleFor('adjacent', hAdj);
+  handleFor('specific', hSpec);
+  sidebar.addEventListener('mouseleave', ()=>{ if(!pvSidebarPinned) closePVSidebar(); });
+})();
+
+document.getElementById('pv-tab-adjacent').addEventListener('click', ()=>setPVMode('adjacent'));
+document.getElementById('pv-tab-specific').addEventListener('click', ()=>setPVMode('specific'));
+
+/* ---------------- 側邊欄獨立字級縮放（1x/1.2x/1.4x） ---------------- */
+const SIDE_SCALES = [1, 1.2, 1.4];
+function bindSideScale(btnId, sidebarId){
+  let idx = 0;
+  const btn = document.getElementById(btnId);
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    idx = (idx + 1) % SIDE_SCALES.length;
+    document.getElementById(sidebarId).style.setProperty('--side-scale', SIDE_SCALES[idx]);
+    btn.innerHTML = '<i class="bi bi-zoom-in"></i> ' + SIDE_SCALES[idx] + 'x';
+    autoGrowAll('#' + sidebarId + ' .tm-card-tgt textarea');
+  });
+}
+bindSideScale('pv-scale-btn', 'pv-sidebar');
+bindSideScale('tm-scale-btn', 'tm-sidebar');
+
+/* ---------------- 術語提示卡（hover / 點擊顯示，僅顯示已存術語譯文，左側為編輯/刪除入口） ---------------- */
+let activeTip = null;
+function showTermTip(span){
+  hideTermTip();
+  const alts = (span.dataset.zh || '').split(/[;；]/).map(s=>s.trim()).filter(Boolean).slice(0, 9);
+  if(alts.length===0) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'term-tip-wrap';
+  wrap.innerHTML = `
+    <div class="tip-side-actions">
+      <button class="tip-action-edit" title="編輯術語"><i class="bi bi-pencil"></i></button>
+      <button class="tip-action-del" title="刪除術語"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="term-tip">
+      <div class="zh-list">
+        ${alts.map((a,i)=>(i>0?'<span class="sep">｜</span>':'') + `<span class="zh-chip" data-zh="${escapeAttr(a)}" title="Ctrl/Alt+${i+1} 帶入"><span class="chip-num">${i+1}</span>${escapeHtml(a)}</span>`).join('')}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const r = span.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  let top = r.top - wrapRect.height - 8;
+  if(top < 8) top = r.bottom + 8;
+  let left = r.left - 30;
+  if(left < 8) left = 8;
+  if(left + wrapRect.width > window.innerWidth - 8) left = window.innerWidth - wrapRect.width - 8;
+  wrap.style.top = top + 'px';
+  wrap.style.left = left + 'px';
+  wrap.querySelectorAll('.zh-chip').forEach(chip=>{
+    chip.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      insertIntoSeg(span.dataset.seg, chip.dataset.zh);
+      hideTermTip();
+    });
+  });
+  wrap.dataset.segId = span.dataset.seg;
+  wrap.querySelector('.tip-action-edit').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const term = termBase.find(t=>t.id===span.dataset.termid) || null;
+    hideTermTip();
+    openTermModal(term, span.dataset.ja);
+  });
+  wrap.querySelector('.tip-action-del').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const term = termBase.find(t=>t.id===span.dataset.termid) || null;
+    hideTermTip();
+    if(term) openDeleteTermModal(term);
+  });
+  activeTip = wrap;
+}
+function hideTermTip(){
+  if(activeTip){ activeTip.remove(); activeTip=null; }
+}
+
+/* 術語卡片顯示中：Ctrl(Mac)/Alt(Windows)+1~9 快速帶入對應編號的譯名。
+   不檢查 isComposing：中文輸入法模式下事件標記不可靠，且此組合不參與注音組字 */
+document.addEventListener('keydown', (e)=>{
+  if(!activeTip) return;
+  if(!e.altKey && !e.ctrlKey) return;
+  const match = /^Digit([1-9])$/.exec(e.code);
+  if(!match) return;
+  const idx = parseInt(match[1], 10) - 1;
+  const chips = activeTip.querySelectorAll('.zh-chip');
+  if(idx >= chips.length) return;
+  e.preventDefault();
+  e.stopPropagation();
+  insertIntoSeg(activeTip.dataset.segId, chips[idx].dataset.zh);
+  hideTermTip();
+});
+
+/* ---------------- 刪除術語確認 Modal ---------------- */
+function openDeleteTermModal(term){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-center">
+      <h3>刪除術語</h3>
+      <p class="modal-confirm-text">確定要刪除術語嗎？此操作無法復原。</p>
+      <div class="modal-actions modal-actions-center">
+        <button class="btn outline large" id="del-term-cancel">取消刪除</button>
+        <button class="btn vermilion large" id="del-term-confirm">確定刪除</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('del-term-cancel').addEventListener('click', ()=>overlay.remove());
+  document.getElementById('del-term-confirm').addEventListener('click', ()=>{
+    termBase = termBase.filter(t=>t.id!==term.id);
+    overlay.remove();
+    renderTermTable();
+    renderSegments();
+  });
+}
+
+/* ---------------- 插入文字到指定句段的譯文欄 ---------------- */
+function insertIntoSeg(segId, text){
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  const ta = document.querySelector(`textarea[data-seg="${segId}"]`);
+  if(!ta) return;
+  const seg = doc.segments.find(s=>s.id===segId);
+  const start = ta.selectionStart ?? ta.value.length;
+  const end = ta.selectionEnd ?? ta.value.length;
+  const newVal = ta.value.slice(0,start) + text + ta.value.slice(end);
+  ta.value = newVal;
+  seg.zh = newVal;
+  doc.updatedAt = Date.now();
+  const pos = start + text.length;
+  ta.focus();
+  ta.setSelectionRange(pos,pos);
+}
+
+/* ---------------- Tab 鍵確認並存入記憶（輕量更新，不重繪以保留焦點順序） ---------------- */
+function confirmSegmentLight(segId, val){
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  const seg = doc.segments.find(s=>s.id===segId);
+  if(!seg) return;
+  seg.zh = val;
+  doc.updatedAt = Date.now();
+  const row = document.querySelector(`textarea[data-seg="${segId}"]`)?.closest('.seg');
+
+  if(!val.trim()){
+    // 譯文被清空：句段退回未確認，解除與 TM 的參照關係，
+    // 但 TM 紀錄本身是歷史翻譯知識庫，保留不動、不自動刪除或清空
+    seg.tmId = null;
+    seg.confirmed = false;
+    updateStats();
+    if(row) row.classList.remove('confirmed');
+    return;
+  }
+
+  if(seg.tmId){
+    const t = tmSegments.find(t=>t.id===seg.tmId);
+    if(t){ t.zh = val; t.source = doc.name; }
+    else { const p=docPair(doc); const nt={id:cid(), ja:seg.ja, zh:val, source:doc.name, srcLang:p.src, tgtLang:p.tgt}; tmSegments.push(nt); seg.tmId=nt.id; }
+  } else {
+    const p = docPair(doc);
+    const nt = {id:cid(), ja:seg.ja, zh:val, source:doc.name, srcLang:p.src, tgtLang:p.tgt};
+    tmSegments.push(nt);
+    seg.tmId = nt.id;
+  }
+  seg.confirmed = true;
+  // 已重新確認儲存的句段，不能再透過「復原」還原：從復原快照中移除
+  if(srUndoSnapshot && srUndoSnapshot.docId === doc.id){
+    srUndoSnapshot.items = srUndoSnapshot.items.filter(it=>it.segId !== segId);
+    if(srUndoSnapshot.items.length === 0) srUndoSnapshot = null;
+  }
+  renderTMTable();
+  renderTMSidebar();
+  updateStats();
+  if(row) row.classList.add('confirmed');
+}
+
+/* ---------------- 反白原文新增術語 ---------------- */
+function clearSelectionUI(){
+  const btn = document.getElementById('sel-add-btn');
+  if(btn) btn.remove();
+}
+document.addEventListener('mouseup', (e)=>{
+  if(e.target.closest('#sel-add-btn') || e.target.closest('.modal-overlay')) return;
+  setTimeout(()=>{
+    const sel = window.getSelection();
+    if(!sel || sel.isCollapsed){ clearSelectionUI(); return; }
+    const anchorEl = sel.anchorNode && sel.anchorNode.nodeType===3 ? sel.anchorNode.parentElement : sel.anchorNode;
+    const srcEl = anchorEl ? anchorEl.closest('.src-text') : null;
+    if(!srcEl){ clearSelectionUI(); return; }
+    const text = sel.toString().trim();
+    if(!text){ clearSelectionUI(); return; }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    showSelectionAddButton(text, rect);
+  }, 0);
+});
+document.addEventListener('mousedown', (e)=>{
+  if(e.target.id==='sel-add-btn') return;
+  if(!e.target.closest('.src-text')) clearSelectionUI();
+});
+function showSelectionAddButton(text, rect){
+  clearSelectionUI();
+  const btn = document.createElement('button');
+  btn.id = 'sel-add-btn';
+  btn.className = 'selection-add-btn';
+  btn.textContent = '+ 新增術語';
+  document.body.appendChild(btn);
+  const btnW = btn.offsetWidth;
+  let top = rect.top - 38;
+  if(top < 8) top = rect.bottom + 8;
+  let left = rect.left;
+  if(left + btnW > window.innerWidth - 8) left = window.innerWidth - btnW - 8;
+  btn.style.top = top + 'px';
+  btn.style.left = left + 'px';
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    openTermModal(null, text);
+    clearSelectionUI();
+  });
+}
+
+/* ---------------- 新增 / 編輯術語 Modal ---------------- */
+function openTermModal(existingTerm, prefillJa){
+  const isEdit = !!existingTerm;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <h3>${isEdit ? '編輯術語' : '新增術語'}</h3>
+      <div class="modal-field ja"><label>原文</label><input id="modal-ja" value="${escapeAttr(isEdit ? existingTerm.ja : (prefillJa||''))}"></div>
+      <div class="modal-field"><label>譯名（可用「;」並列多個）</label><input id="modal-zh" value="${escapeAttr(isEdit ? existingTerm.zh : '')}" placeholder="例：魄力;張力;氣勢"></div>
+      <div class="modal-field"><label>備註（選填）</label><input id="modal-note" value="${escapeAttr(isEdit ? (existingTerm.note||'') : '')}"></div>
+      <div class="modal-actions">
+        <button class="btn outline small" id="modal-cancel">取消</button>
+        <button class="btn vermilion small" id="modal-confirm">${isEdit ? '儲存' : '新增'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('modal-zh').focus();
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('modal-cancel').addEventListener('click', ()=>overlay.remove());
+  document.getElementById('modal-confirm').addEventListener('click', ()=>{
+    const jaV = document.getElementById('modal-ja').value.trim();
+    const zhV = document.getElementById('modal-zh').value.trim();
+    if(!jaV || !zhV){ alert('原文與譯名都不能空白'); return; }
+    if(zhV.split(/[;；]/).map(x=>x.trim()).filter(Boolean).length > 9){ alert('中文譯名最多只能儲存 9 個'); return; }
+    const noteV = document.getElementById('modal-note').value.trim();
+    if(isEdit){
+      existingTerm.ja = jaV; existingTerm.zh = zhV; existingTerm.note = noteV;
+    } else {
+      const doc = getCurrentDoc();
+      const p = docPair(doc);
+      termBase.unshift({id:cid(), ja:jaV, zh:zhV, note:noteV, source: doc ? doc.name : '', srcLang:p.src, tgtLang:p.tgt});
+      termPage = 1;   // 新詞條插在最前面，術語庫跳回第 1 頁
+    }
+    overlay.remove();
+    renderTermTable();
+    renderSegments();
+  });
+}
+
+/* ---------------- 分頁切換 ---------------- */
+function activateTab(key){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===key));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='panel-'+key));
+  hideTermTip();
+  updateTMSidebarVisibility(key);
+  updatePVSidebarVisibility(key);
+  document.getElementById('scroll-capsule')?.classList.toggle('show', key==='projects' || key==='work');
+  if(key==='projects') renderProjects();
+  if(key==='work'){ renderPVSidebar(); autoGrowAll('#seg-list textarea'); }
+}
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));
+});
+document.getElementById('btn-back-projects').addEventListener('click', ()=>{
+  renderProjects();
+  activateTab('projects');
+});
+
+/* ---------------- 重置確認狀態：全文件退回未確認，重新逐句校對 ---------------- */
+document.getElementById('btn-reset-confirm').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  const n = doc.segments.filter(s=>s.confirmed).length;
+  if(n === 0){ alert('目前檔案沒有已確認的句段。'); return; }
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-center modal-card-wide">
+      <h3>重置確認狀態</h3>
+      <p class="modal-confirm-text">有 ${n} 句已確認的句段將退回未確認。<br>譯文與翻譯記憶皆保留不動，請重新逐句按 Tab 校對。</p>
+      <div class="modal-actions modal-actions-center">
+        <button class="btn outline large" id="rc-cancel">取消重置</button>
+        <button class="btn vermilion large" id="rc-confirm">確定重置</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('rc-cancel').addEventListener('click', ()=>overlay.remove());
+  document.getElementById('rc-confirm').addEventListener('click', ()=>{
+    // 全部退回未確認；tmId 保留 → 重按 Tab 覆寫同一筆 TM，不產生重複紀錄
+    doc.segments.forEach(s=>{ s.confirmed = false; });
+    doc.updatedAt = Date.now();
+    // 取代的復原快照存有舊的 confirmed 狀態，重置後不可再復原，一律作廢
+    if(srUndoSnapshot && srUndoSnapshot.docId === doc.id) srUndoSnapshot = null;
+    overlay.remove();
+    renderSegments();
+    updateStats();
+  });
+});
+
+/* ---------------- 語系配對（入稿前必選；文件建立時定格記錄） ---------------- */
+const LANG_NAMES = {
+  'zh-TW':'繁體中文','zh-HK':'繁體中文','zh-CN':'簡體中文','zh-SG':'簡體中文',
+  'en':'英文','en-US':'英文','en-GB':'英文',
+  'ja':'日文','ko':'韓文','fr':'法文','de':'德文','es':'西班牙文','vi':'越南文','th':'泰文'
+};
+function langName(code){ return LANG_NAMES[code] || code || '—'; }
+function getLangPair(){
+  return {
+    src: document.getElementById('src-lang').value,
+    tgt: document.getElementById('tgt-lang').value
+  };
+}
+function langPairReady(){
+  const {src, tgt} = getLangPair();
+  return !!src && !!tgt && src !== tgt;
+}
+/* 閘門：語系未配對完成前，兩條入稿路徑都封鎖；配對改變時作廢已暫存的 xlsx */
+function syncLangGate(){
+  const {src, tgt} = getLangPair();
+  const ready = langPairReady();
+  const hint = document.getElementById('lang-gate-hint');
+  if(ready){
+    hint.textContent = `已選擇：${langName(src)}（${src}）→ ${langName(tgt)}（${tgt}）`;
+    hint.classList.add('ready');
+  }else{
+    hint.textContent = (src && tgt && src===tgt)
+      ? '來源與目標語系不可相同'
+      : '請先選擇來源與目標語系，才能匯入稿件';
+    hint.classList.remove('ready');
+  }
+  document.getElementById('btn-segment').disabled = !ready;
+  document.getElementById('btn-xlsx-create').disabled = !ready || !stagedXlsx;
+  document.getElementById('paste-label').textContent =
+    ready ? `貼上${langName(src)}原文，點擊「建立檔案」拆成句子後送入專案管理區`
+          : '貼上原文，點擊「建立檔案」拆成句子後送入專案管理區';
+  document.getElementById('xlsx-col-hint').textContent =
+    ready ? `僅讀取 ${src} / ${tgt} 兩欄；空白模板列自動略過`
+          : '僅讀取來源／目標語系兩欄；空白模板列自動略過';
+}
+['src-lang','tgt-lang'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{
+    // 語系改變 → 已暫存的 xlsx 是用舊語系解析的，一律作廢重拖
+    if(stagedXlsx){
+      stagedXlsx = null;
+      const drop = document.getElementById('xlsx-drop');
+      drop.classList.remove('staged');
+      drop.innerHTML = '<div class="drop-title">拖入 .xlsx 檔案</div><div>語系配對已變更，請重新拖入檔案｜每個分頁（P001、P002…）建立一個文件</div>';
+    }
+    syncLangGate();
+  });
+});
+
+/* ---------------- 入稿工作區：建立檔案 ---------------- */
+document.getElementById('btn-segment').addEventListener('click', ()=>{
+  if(!langPairReady()){ alert('請先選擇來源與目標語系（兩者不可相同）。'); return; }
+  const {src, tgt} = getLangPair();
+  const raw = document.getElementById('raw-input').value;
+  const parts = segmentText(raw);
+  if(parts.length===0){ alert(`請先貼上${langName(src)}原文`); return; }
+  const nameInput = document.getElementById('doc-name-input');
+  const name = uniqueDocName(nameInput.value.trim() || ('未命名文件' + (documents.length+1)));
+  const now = Date.now();
+  const doc = {
+    id: cid(), name, folderId: null,
+    srcLang: src, tgtLang: tgt,
+    segments: parts.map(p=>({id:cid(), ja:p, zh:'', confirmed:false, tmId:null})),
+    createdAt: now, updatedAt: now
+  };
+  documents.push(doc);
+  document.getElementById('raw-input').value='';
+  nameInput.value='';
+  renderProjects();
+  activateTab('projects');
+});
+
+/* ---------------- 入稿工作區：xlsx 拖放入稿 ---------------- */
+let stagedXlsx = null;   // { fileName, sheets:[{name, rows:[{ja, zh, srcNo}]}] }
+
+function uniqueDocName(name){
+  if(!documents.some(d=>d.name===name)) return name;
+  let n = 2;
+  while(documents.some(d=>d.name===`${name} (${n})`)) n++;
+  return `${name} (${n})`;
+}
+
+function parseXlsxFile(file){
+  const drop = document.getElementById('xlsx-drop');
+  const btn = document.getElementById('btn-xlsx-create');
+  if(!langPairReady()){
+    drop.classList.remove('staged');
+    drop.innerHTML = '<div class="drop-title">請先選擇語系</div><div>選好來源與目標語系後，再拖入 .xlsx 檔案</div>';
+    stagedXlsx = null; btn.disabled = true;
+    return;
+  }
+  const {src, tgt} = getLangPair();
+  if(typeof XLSX === 'undefined'){
+    drop.classList.remove('staged');
+    drop.innerHTML = '<div class="drop-title">無法載入 Excel 解析器</div><div>SheetJS 需要網路連線（首次載入），請確認網路後重新整理頁面。</div>';
+    return;
+  }
+  if(!/\.xlsx$/i.test(file.name)){
+    drop.classList.remove('staged');
+    drop.innerHTML = '<div class="drop-title">檔案格式不符</div><div>請拖入 .xlsx 檔案</div>';
+    stagedXlsx = null; btn.disabled = true;
+    return;
+  }
+  file.arrayBuffer().then(buf=>{
+    const wb = XLSX.read(buf);
+    const sheets = [];
+    const skipped = [];
+    wb.SheetNames.forEach(sn=>{
+      const grid = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null});
+      if(grid.length < 2){ skipped.push(sn); return; }
+      // 依表頭列找欄位：來源語系欄／目標語系欄（大小寫不敏感，zh-TW 可對上 zh-tw）／標號
+      const header = grid[0].map(h => h===null ? '' : String(h).trim());
+      const headerLower = header.map(h => h.toLowerCase());
+      const srcCol = headerLower.indexOf(src.toLowerCase());
+      const tgtCol = headerLower.indexOf(tgt.toLowerCase());
+      const noCol = header.indexOf('標號');
+      if(srcCol === -1){ skipped.push(sn); return; }
+      const rows = [];
+      for(let r=1; r<grid.length; r++){
+        const ja = grid[r][srcCol]===null ? '' : String(grid[r][srcCol]).replace(/\r\n?/g,'\n').trim();
+        const zh = (tgtCol!==-1 && grid[r][tgtCol]!==null) ? String(grid[r][tgtCol]).replace(/\r\n?/g,'\n').trim() : '';
+        if(!ja && !zh) continue;   // 空白模板列略過
+        const srcNo = (noCol!==-1 && grid[r][noCol]!==null) ? String(grid[r][noCol]).trim() : null;
+        rows.push({ja, zh, srcNo});
+      }
+      if(rows.length > 0) sheets.push({name:sn, rows});
+      else skipped.push(sn);
+    });
+    if(sheets.length === 0){
+      drop.classList.remove('staged');
+      drop.innerHTML = `<div class="drop-title">讀不到可匯入的資料</div><div>請確認分頁表頭含「${escapeHtml(src)}」欄，且至少一列有內容</div>`;
+      stagedXlsx = null; btn.disabled = true;
+      return;
+    }
+    stagedXlsx = { fileName:file.name, sheets, src, tgt };
+    const totalSegs = sheets.reduce((sum,s)=>sum+s.rows.length, 0);
+    const detail = sheets.map(s=>`${escapeHtml(s.name)}（${s.rows.length} 段）`).join('、');
+    const skipNote = skipped.length ? `<div class="staged-detail">略過空分頁：${skipped.map(escapeHtml).join('、')}</div>` : '';
+    drop.classList.add('staged');
+    drop.innerHTML = `
+      <div class="staged-file"><i class="bi bi-file-earmark-spreadsheet"></i> ${escapeHtml(file.name)}</div>
+      <div class="staged-detail">${sheets.length} 個分頁、共 ${totalSegs} 個句段</div>
+      <div class="staged-detail">${detail}</div>
+      ${skipNote}
+      <div class="staged-detail">重新拖入或點擊可更換檔案</div>`;
+    btn.disabled = false;
+  }).catch(()=>{
+    drop.classList.remove('staged');
+    drop.innerHTML = '<div class="drop-title">解析失敗</div><div>檔案可能損壞，請重新拖入 .xlsx</div>';
+    stagedXlsx = null; btn.disabled = true;
+  });
+}
+
+const xlsxDrop = document.getElementById('xlsx-drop');
+const xlsxFileInput = document.getElementById('xlsx-file');
+xlsxDrop.addEventListener('click', ()=> xlsxFileInput.click());
+xlsxFileInput.addEventListener('change', ()=>{
+  if(xlsxFileInput.files[0]) parseXlsxFile(xlsxFileInput.files[0]);
+  xlsxFileInput.value='';
+});
+xlsxDrop.addEventListener('dragover', (e)=>{ e.preventDefault(); xlsxDrop.classList.add('dragover'); });
+xlsxDrop.addEventListener('dragleave', ()=> xlsxDrop.classList.remove('dragover'));
+xlsxDrop.addEventListener('drop', (e)=>{
+  e.preventDefault();
+  xlsxDrop.classList.remove('dragover');
+  if(e.dataTransfer.files[0]) parseXlsxFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('btn-xlsx-create').addEventListener('click', ()=>{
+  if(!stagedXlsx) return;
+  const prefix = document.getElementById('xlsx-prefix').value.trim();
+  const now = Date.now();
+  stagedXlsx.sheets.forEach(sheet=>{
+    const baseName = prefix ? `${prefix}-${sheet.name}` : sheet.name;
+    documents.push({
+      id: cid(), name: uniqueDocName(baseName), folderId: null,
+      srcLang: stagedXlsx.src, tgtLang: stagedXlsx.tgt,
+      segments: sheet.rows.map(r=>({id:cid(), ja:r.ja, zh:r.zh, confirmed:false, tmId:null, srcNo:r.srcNo})),
+      createdAt: now, updatedAt: now
+    });
+  });
+  // 重置暫存與 UI
+  stagedXlsx = null;
+  document.getElementById('xlsx-prefix').value='';
+  document.getElementById('btn-xlsx-create').disabled = true;
+  xlsxDrop.classList.remove('staged');
+  xlsxDrop.innerHTML = '<div class="drop-title">拖入 .xlsx 檔案</div><div>或點擊選擇檔案｜每個分頁（P001、P002…）建立一個文件</div>';
+  renderProjects();
+  activateTab('projects');
+});
+
+/* ---------------- 翻譯工作區事件 ---------------- */
+document.getElementById('btn-export-work').addEventListener('click', ()=>{
+  const doc = getCurrentDoc();
+  if(!doc) return;
+  const p = docPair(doc);
+  downloadJSON(doc.segments.map(s=>({
+    [p.src]: s.ja, [p.tgt]: s.zh,
+    confirmed: !!s.confirmed, source: doc.name, srcLang: p.src, tgtLang: p.tgt
+  })), (doc.name||'segments') + '.json');
+});
+
+document.getElementById('seg-list').addEventListener('click', (e)=>{
+  if(e.target.classList.contains('term-hit')){
+    e.stopPropagation();
+    showTermTip(e.target);
+    return;
+  }
+});
+
+document.getElementById('seg-list').addEventListener('mouseover', (e)=>{
+  if(e.target.classList.contains('term-hit')) showTermTip(e.target);
+});
+document.addEventListener('click', (e)=>{
+  if(activeTip && !activeTip.contains(e.target) && !e.target.classList.contains('term-hit')) hideTermTip();
+});
+
+document.getElementById('seg-list').addEventListener('input', (e)=>{
+  if(e.target.tagName==='TEXTAREA'){
+    autoGrow(e.target);
+    const doc = getCurrentDoc();
+    if(!doc) return;
+    const seg = doc.segments.find(s=>s.id===e.target.dataset.seg);
+    if(seg){
+      seg.zh = e.target.value;
+      // 已確認句段的譯文一被編輯，立即退回未確認（徽章不說謊）；
+      // tmId 保留，重按 Tab 時覆寫同一筆 TM，不會產生重複紀錄
+      if(seg.confirmed){
+        seg.confirmed = false;
+        e.target.closest('.seg')?.classList.remove('confirmed');
+        updateStats();
+      }
+      updateWorkProgress();
+    }
+    doc.updatedAt = Date.now();
+  }
+});
+
+document.getElementById('seg-list').addEventListener('keydown', (e)=>{
+  if(e.target.tagName==='TEXTAREA' && e.key==='Tab'){
+    confirmSegmentLight(e.target.dataset.seg, e.target.value);
+  }
+});
+
+/* ---------------- 專案管理區事件 ---------------- */
+document.getElementById('project-tbody').addEventListener('click', (e)=>{
+  const link = e.target.closest('.doc-link');
+  if(link){
+    currentDocId = link.dataset.docid;
+    renderSegments();
+    applyViewMode();
+    activateTab('work');
+    return;
+  }
+  const fdel = e.target.closest('.folder-del');
+  if(fdel){
+    const fid = fdel.dataset.folderid;
+    if(!confirm('刪除這個資料夾？裡面的檔案會移回未分類，不會被刪除。')) return;
+    documents.forEach(d=>{ if(d.folderId===fid) d.folderId=null; });
+    folders = folders.filter(f=>f.id!==fid);
+    renderProjects();
+    return;
+  }
+  const rdel = e.target.closest('.row-del');
+  if(rdel && rdel.dataset.docid){
+    const did = rdel.dataset.docid;
+    if(!confirm('刪除這個檔案？所有句段內容將會遺失。')) return;
+    documents = documents.filter(d=>d.id!==did);
+    if(currentDocId===did) currentDocId=null;
+    renderProjects();
+    return;
+  }
+  const folderRow = e.target.closest('.proj-folder-row');
+  if(folderRow){
+    const fid = folderRow.dataset.folderid;
+    if(collapsedFolders.has(fid)) collapsedFolders.delete(fid); else collapsedFolders.add(fid);
+    renderProjects();
+  }
+});
+document.getElementById('project-tbody').addEventListener('change', (e)=>{
+  if(e.target.classList.contains('doc-folder-select')){
+    const doc = documents.find(d=>d.id===e.target.dataset.docid);
+    if(doc){ doc.folderId = e.target.value || null; doc.updatedAt = Date.now(); }
+    renderProjects();
+  }
+});
+document.getElementById('project-search').addEventListener('input', renderProjects);
+document.getElementById('btn-new-folder').addEventListener('click', ()=>{
+  const name = prompt('新增資料夾名稱：', '新資料夾');
+  if(!name || !name.trim()) return;
+  folders.push({id:cid(), name:name.trim()});
+  renderProjects();
+});
+
+/* 術語庫 */
+document.getElementById('btn-add-term').addEventListener('click', ()=>{
+  const np = langPairReady() ? getLangPair() : {src:'ja', tgt:'zh-TW'};
+  termBase.unshift({id:cid(), ja:'', zh:'', note:'', source:'', srcLang:np.src, tgtLang:np.tgt});
+  termPage = 1;   // 新詞條插在最前面，跳回第 1 頁讓使用者看得到
+  renderTermTable();
+  renderSegments();
+  document.querySelector('#term-tbody input[data-field="ja"]')?.focus();
+});
+document.getElementById('term-search').addEventListener('input', ()=>{
+  termPage = 1;   // 搜尋條件改變即回到第 1 頁
+  renderTermTable();
+});
+document.getElementById('term-pagination').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.page-btn');
+  if(!btn) return;
+  termPage = parseInt(btn.dataset.page, 10);
+  renderTermTable();
+});
+document.getElementById('term-tbody').addEventListener('input', (e)=>{
+  const {field,id} = e.target.dataset;
+  if(!field) return;
+  const t = termBase.find(t=>t.id===id);
+  if(t) t[field] = e.target.value;
+  renderSegments();
+});
+document.getElementById('term-tbody').addEventListener('change', (e)=>{
+  if(e.target.dataset.field !== 'zh') return;
+  const parts = e.target.value.split(/[;；]/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length > 9){
+    alert('中文譯名最多只能儲存 9 個，已保留前 9 個');
+    const trimmed = parts.slice(0,9).join(';');
+    e.target.value = trimmed;
+    const t = termBase.find(t=>t.id===e.target.dataset.id);
+    if(t) t.zh = trimmed;
+    renderSegments();
+  }
+});
+document.getElementById('term-tbody').addEventListener('click', (e)=>{
+  const del = e.target.closest('.row-del');
+  if(del){
+    termBase = termBase.filter(t=>t.id!==del.dataset.id);
+    renderTermTable();
+    renderSegments();
+  }
+});
+document.getElementById('btn-export-terms').addEventListener('click', ()=>{
+  downloadJSON(termBase.map(t=>{
+    const sl = t.srcLang||'ja', tl = t.tgtLang||'zh-TW';
+    return {[sl]:t.ja, [tl]:t.zh, note:t.note, source:t.source||'', srcLang:sl, tgtLang:tl};
+  }), 'termbase.json');
+});
+document.getElementById('file-import-terms').addEventListener('change', (e)=>{
+  importJSON(e.target.files[0], (data)=>{
+    if(!Array.isArray(data)) return alert('檔案格式不正確（需為陣列）');
+    data.forEach(d=>{
+      const sl = d.srcLang||'ja', tl = d.tgtLang||'zh-TW';
+      const src = d[sl] !== undefined ? d[sl] : d.ja;   // 新格式動態鍵，退回舊格式 ja
+      const tgt = d[tl] !== undefined ? d[tl] : d.zh;   // 新格式動態鍵，退回舊格式 zh
+      if(src) termBase.push({id:cid(), ja:src, zh:tgt||'', note:d.note||'', source:d.source||'', srcLang:sl, tgtLang:tl});
+    });
+    renderTermTable();
+    renderSegments();
+  });
+  e.target.value='';
+});
+
+/* 翻譯記憶 */
+document.getElementById('tm-search').addEventListener('input', ()=>{
+  tmPage = 1;   // 搜尋條件改變即回到第 1 頁
+  renderTMTable();
+});
+document.getElementById('tm-pagination').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.page-btn');
+  if(!btn) return;
+  tmPage = parseInt(btn.dataset.page, 10);
+  renderTMTable();
+});
+document.getElementById('tm-tbody').addEventListener('click', (e)=>{
+  const del = e.target.closest('.row-del');
+  if(del){
+    const tmId = del.dataset.tmid;
+    tmSegments = tmSegments.filter(t=>t.id!==tmId);
+    // 清除所有文件中指向這筆記憶的懸空參照：徽章退回未確認，但譯文文字保留不動
+    documents.forEach(doc=>{
+      doc.segments.forEach(seg=>{
+        if(seg.tmId === tmId){
+          seg.tmId = null;
+          seg.confirmed = false;
+        }
+      });
+    });
+    renderTMTable();
+    renderTMSidebar();
+    renderSegments();
+    renderProjects();
+  }
+});
+document.getElementById('btn-export-tm').addEventListener('click', ()=>{
+  downloadJSON(tmSegments.map(t=>{
+    const sl = t.srcLang||'ja', tl = t.tgtLang||'zh-TW';
+    return {[sl]:t.ja, [tl]:t.zh, source:t.source||'', srcLang:sl, tgtLang:tl};
+  }), 'tm.json');
+});
+document.getElementById('file-import-tm').addEventListener('change', (e)=>{
+  importJSON(e.target.files[0], (data)=>{
+    if(!Array.isArray(data)) return alert('檔案格式不正確（需為陣列）');
+    data.forEach(d=>{
+      const sl = d.srcLang||'ja', tl = d.tgtLang||'zh-TW';
+      const src = d[sl] !== undefined ? d[sl] : d.ja;
+      const tgt = d[tl] !== undefined ? d[tl] : d.zh;
+      if(src) tmSegments.push({id:cid(), ja:src, zh:tgt||'', source:d.source||'', srcLang:sl, tgtLang:tl});
+    });
+    renderTMTable();
+  });
+  e.target.value='';
+});
+
+/* 通用：匯出 / 匯入 JSON（純前端，不使用 localStorage） */
+function downloadJSON(data, filename){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function importJSON(file, cb){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{ cb(JSON.parse(reader.result)); }
+    catch(err){ alert('JSON 解析失敗：' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------------- 初始渲染 ---------------- */
+applyViewMode();
+applyDarkMode();
+applyTextScale();
+updateTMSidebarVisibility('ingest');
+updatePVSidebarVisibility('ingest');
+renderTMSidebar();
+renderPVSidebar();
+renderSegments();
+renderProjects();
+renderTermTable();
+syncLangGate();
+renderTMTable();
+</script>
+<div class="scroll-capsule" id="scroll-capsule">
+  <button id="scroll-top-btn" title="回到頂端"><i class="bi bi-caret-up"></i></button>
+  <button id="scroll-bottom-btn" title="移至底端"><i class="bi bi-caret-down"></i></button>
+</div>
+<script>
+document.getElementById('scroll-top-btn').addEventListener('click', ()=>{
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+document.getElementById('scroll-bottom-btn').addEventListener('click', ()=>{
+  window.scrollTo({top:document.documentElement.scrollHeight, behavior:'smooth'});
+});
+let _growTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(_growTimer);
+  _growTimer = setTimeout(()=>{
+    autoGrowAll('#seg-list textarea');
+    autoGrowAll('.tm-card-tgt textarea');
+  }, 150);
+});
+</script>
+</body>
+</html>
