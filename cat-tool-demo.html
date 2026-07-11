@@ -749,6 +749,7 @@
         </table>
       </div>
       <div id="term-pagination"></div>
+      <div class="empty" id="term-empty" style="display:none;">尚無術語。點「+新增詞條」或在翻譯工作區反白原文新增。</div>
     </div>
   </section>
 
@@ -809,22 +810,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* ---------------- 狀態（全部存在記憶體中，重新整理頁面即清空） ---------------- */
-let termBase = [
-  {id:cid(), ja:"迫力", zh:"魄力;張力;氣勢", note:"", source:"範例"},
-  {id:cid(), ja:"パース", zh:"透視", note:"也作「透視法」", source:"範例"},
-  {id:cid(), ja:"エフェクト", zh:"特效", note:"", source:"範例"},
-  {id:cid(), ja:"ライティング", zh:"打光", note:"", source:"範例"},
-  {id:cid(), ja:"構図", zh:"構圖", note:"", source:"範例"},
-  {id:cid(), ja:"デッサン", zh:"素描", note:"", source:"範例"},
-  {id:cid(), ja:"遠近法", zh:"透視法", note:"", source:"範例"},
-  {id:cid(), ja:"質感", zh:"質感", note:"", source:"範例"},
-  {id:cid(), ja:"重心", zh:"重心", note:"", source:"範例"},
-];
+let termBase = [];   // {id, ja, zh, note, source, srcLang, tgtLang}
 
-let tmSegments = [
-  {id:cid(), ja:"迫力のあるポーズを描くには、まず重心の位置を意識することが大切です。", zh:"要畫出具有魄力的姿勢，首先必須留意重心的位置。", source:"範例"},
-  {id:cid(), ja:"パースを正しく取ることで、画面に奥行きが生まれます。", zh:"正確掌握透視，畫面就會產生景深。", source:"範例"},
-];
+let tmSegments = []; // {id, ja, zh, source, srcLang, tgtLang}
 
 let folders = [];     // {id, name}
 let documents = [];   // {id, name, folderId, srcLang, tgtLang, segments:[{id,ja,zh,confirmed,tmId}], createdAt, updatedAt}
@@ -1106,8 +1094,10 @@ function renderProjects(){
 function renderTermTable(){
   const tbody = document.getElementById('term-tbody');
   const kw = document.getElementById('term-search').value.trim();
+  const empty = document.getElementById('term-empty');
   tbody.innerHTML='';
   const filtered = termBase.filter(t => !kw || t.ja.includes(kw) || t.zh.includes(kw));
+  empty.style.display = termBase.length===0 ? 'block' : 'none';
   termPage = clampPage(termPage, filtered.length);
   filtered
     .slice((termPage-1)*PAGE_SIZE, termPage*PAGE_SIZE)
