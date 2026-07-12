@@ -1,4 +1,7 @@
 import { useStore } from './store.js';
+import ProjectsTab from './tabs/ProjectsTab.jsx';
+import Toast from './components/Toast.jsx';
+import ScrollCapsule from './components/ScrollCapsule.jsx';
 
 const TABS = [
   { key: 'ingest',   label: '入稿工作區' },
@@ -7,6 +10,13 @@ const TABS = [
   { key: 'terms',    label: '術語庫' },
   { key: 'tm',       label: '翻譯記憶' }
 ];
+
+/* 已遷移分頁掛元件；其餘輪次到位前掛佔位卡 */
+const TAB_VIEWS = { projects: ProjectsTab };
+
+function Placeholder({ label }) {
+  return <div className="card"><p>{label}——React 版遷移中，本分頁待後續輪次搬遷。</p></div>;
+}
 
 export default function App() {
   const currentTab  = useStore(s => s.currentTab);
@@ -51,13 +61,18 @@ export default function App() {
         ))}
       </nav>
 
-      {TABS.map(t => (
-        <section key={t.key} className={'panel' + (currentTab === t.key ? ' active' : '')} id={'panel-' + t.key}>
-          <div className="card">
-            <p>{t.label}——React 版遷移中，本分頁待後續輪次搬遷。</p>
-          </div>
-        </section>
-      ))}
+      {/* 五個 panel 常駐 DOM、以 active class 切換（同 vanilla；隱藏面板量測陷阱的前提） */}
+      {TABS.map(t => {
+        const View = TAB_VIEWS[t.key];
+        return (
+          <section key={t.key} className={'panel' + (currentTab === t.key ? ' active' : '')} id={'panel-' + t.key}>
+            {View ? <View /> : <Placeholder label={t.label} />}
+          </section>
+        );
+      })}
+
+      <ScrollCapsule />
+      <Toast />
     </div>
   );
 }
