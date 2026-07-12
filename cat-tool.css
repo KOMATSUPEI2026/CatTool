@@ -1,3 +1,15 @@
+/* ===== 現代精簡 CSS Reset =====
+   刻意不採用：全元素歸零、line-height:1（中日文排版有害）、
+   textarea 相關 reset（避開 autoGrow 機制） */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+body { line-height: 1.5; -webkit-font-smoothing: antialiased; }
+input, button, textarea, select { font: inherit; }
+img, svg { display: block; max-width: 100%; }
+p, h1, h2, h3 { overflow-wrap: break-word; }
+ul, ol { list-style: none; padding: 0; }
+/* ===== Reset 結束 ===== */
+
   :root{
     --paper:#E7E4DC;
     --paper-card:#FBFAF7;
@@ -49,8 +61,7 @@
     --accent-strong-text:#1B1A17;
     --handle-active-tint:rgba(232,228,218,0.30);
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{padding:0;}
   body{
     background:
       repeating-linear-gradient(0deg, transparent, transparent 27px, var(--grid-rgba) 27px, var(--grid-rgba) 28px),
@@ -182,7 +193,7 @@
   .scroll-capsule button:hover{background:var(--hover-tint);color:var(--vermilion);}
   .scroll-capsule button:first-child{border-bottom:1px solid var(--line);}
 
-  /* 快捷標點符號列（V37：固定視窗下緣置中，僅翻譯工作區顯示） */
+  /* 快捷標點符號列（固定視窗下緣置中，僅翻譯工作區顯示） */
   #punct-bar{
     position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:70;
     display:none;align-items:center;gap:6px;padding:8px 12px;
@@ -543,7 +554,7 @@
   .modal-field.ja input{font-family:"Noto Serif JP","Noto Serif TC",serif;}
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
 
-  /* 句段整理 Modal（編輯/分割、排列、合併、刪除共用；V36） */
+  /* 句段整理 Modal（編輯/分割、排列、合併、刪除共用） */
   .modal-card.modal-card-xl{width:720px;}
   .seg-tool-hint{font-size:12px;color:var(--ink-soft);margin:0 0 10px;}
   .seg-tool-list{max-height:56vh;overflow-y:auto;border:1px solid var(--line);border-radius:6px;}

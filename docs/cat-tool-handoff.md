@@ -1,18 +1,18 @@
-# 校譯台（cat-tool-demo）交接文件 V37
+# 校譯台（cat-tool-demo）交接文件 V38
 
-> 用途：在 Claude Code 中以本文件 + cat-tool-demo.html 接續開發。
-> 目前版本：**第 37 版**（V23 → V37 演進，變更摘要見下）
-> 上一份交接文件版本：V23。本文件已整併 V24–V37 全部變更與討論結論。
+> 用途：在 Claude Code 中以本文件 + cat-tool-demo.html + cat-tool.css 接續開發。
+> 目前版本：**第 38 版**（V23 → V38 演進，變更摘要見下）
+> 上一份交接文件版本：V23。本文件已整併 V24–V38 全部變更與討論結論。
 
 ## 專案概要
 
 - **目標**：自製網頁版 CAT（電腦輔助翻譯）工具，取代停止服務的 Termsoup，主力工作流為日文→繁體中文書籍翻譯（插畫技法書），已支援多語系配對
-- **技術**：純 HTML + CSS + 原生 JavaScript，單一檔案（約 2400 行）
+- **技術**：純 HTML + CSS + 原生 JavaScript。V38 起兩檔：`cat-tool-demo.html`（結構＋JS，約 2280 行）＋`cat-tool.css`（樣式，約 640 行，含頂部現代精簡 reset）——為 React 重構鋪路（自訂 CSS 屆時直接 import）
 - **外部依賴（CDN，首次開啟需網路）**：Google Fonts（Noto Serif TC / Sans TC / Serif JP）、SheetJS 0.18.5（xlsx 解析）、Bootstrap Icons 1.11.3（全站圖示）。V23 的「零依賴」原則已在 V26/V30 經使用者同意打破
 - **資料**：全部存在瀏覽器記憶體，重新整理即清空；各分頁支援 JSON 匯出/匯入備份
 - **開發環境**：M2 MacBook Air，本機瀏覽器直開 HTML
 
-## V24–V37 版本演進摘要
+## V24–V38 版本演進摘要
 
 | 版本 | 變更 |
 |---|---|
@@ -30,6 +30,7 @@
 | V35 | 「特定頁檢視」→「跨頁檢視」，搜尋跨度：檔名/語系代碼/原文譯文內容三路比對 |
 | V36 | **句段整理五功能**（仿 Termsoup Modal 式）：編輯/分割、拖曳排序、相鄰合併（譯文串接）、新增、多選刪除；情境列 5 icon 鈕 |
 | V37 | **快捷標點符號列**（仿 Termsoup）：固定視窗下緣、10 格可自訂、Ctrl/Alt+Shift+1~0；配對括號停中間/包反白；**V28 補齊**——insertIntoSeg 一律退回未確認（術語帶入自此也適用） |
+| V38 | **CSS 抽離**成獨立 `cat-tool.css`（React 重構鋪路）＋**現代精簡 reset**（裁剪自 Comeau/Bell，7 條；明確不採 Meyer 原版與 line-height:1） |
 
 ## 資料模型（核心）
 
@@ -91,7 +92,7 @@ folders    = [{ id, name }]
 3. **匯入譯文一律未確認**：xlsx 帶入的 zh 照填但徽章空心，校閱按 Tab 才進 TM（順便把舊稿沉澱進記憶庫）
 4. **「儲存檔案」按鈕暫緩**：等 Google Sheets 串接後再定義（屆時儲存目的地=試算表）；快照/還原方案已評估並否決（雙快照互斥、TM 重複等問題）
 5. **快捷鍵**：Mac Ctrl / Win Alt + 數字（Shift 出符號、Option 被輸入法攔截）
-6. **框架評估結論**：暫不重寫 React；分水嶺=Sheets 串接後的非同步複雜度。屆時資料模型原樣搬遷。**BS5 版面樣式不採用**（僅用 Bootstrap Icons），設計系統維持自訂 CSS
+6. **框架評估結論**：暫不重寫 React；分水嶺=Sheets 串接後的非同步複雜度。屆時資料模型原樣搬遷。**BS5 版面樣式不採用**（僅用 Bootstrap Icons），設計系統維持自訂 CSS——V38 已抽離成獨立 `cat-tool.css`，React 遷移時直接 import；reset 採現代精簡版（Comeau/Bell 裁剪 7 條，置於 css 頂部），Meyer 原版與 line-height:1 已評估否決（中日文排版有害）
 7. **API 方案已定**：axios（CDN、鎖版本 1.7.x）、interceptor 統一掛 OAuth token 與 401 刷新、Sheets 請求集中單一模組。目前**尚無任何網路請求程式碼**
 
 ## 設計規範（核心刻度，全站強制）
@@ -109,7 +110,7 @@ folders    = [{ id, name }]
 3. **隱藏面板量測陷阱**：panel display:none 時 scrollHeight=0，autoGrow 等量測必須在面板可見後補算（activateTab 已掛）
 4. **IME 相容模式**：側欄搜尋框=「搜尋框常駐+只重繪結果區+composition 事件」，改動搜尋相關功能時不可破壞此結構
 5. 動態改寫含 icon 的按鈕要用 innerHTML，用 textContent 會吃掉 icon
-6. 重大修改後驗證：CSS 大括號配對、`node --check`（抽出 script 檢查）、設計規範刻度掃描（字級/偶數 spacing）；另有 Puppeteer 自動化測試在 `tests/`（V36 起，見 tests/README.md，headless Chrome 實際模擬操作驗證）
+6. 重大修改後驗證（V38 起 CSS 檢查直接對 `cat-tool.css`，不再需要 awk 抽 `<style>`）：CSS 大括號配對、`node --check`（抽出 script 檢查，JS 仍在 html 內）、設計規範刻度掃描（字級/偶數 spacing）；另有 Puppeteer 自動化測試在 `tests/`（V36 起，見 tests/README.md，headless Chrome 實際模擬操作驗證）
 7. TM 相似度為字元 bigram Jaccard，非商用 CAT 等級
 8. CDN 三依賴首次載入需網路；SheetJS 載入失敗時拖放區有明確提示（非無聲失敗）
 9. **class 命名撞名陷阱**：新元件的 class 必須避開全站既有類名——V37 標點列空格鍵曾取名 `empty`，撞上全域空狀態樣式 `.empty{padding:50px 20px}` 被灌大內距跑版（已改名 `blank`）。新增 class 前先 grep 確認未被占用
