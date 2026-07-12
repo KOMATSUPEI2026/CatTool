@@ -50,11 +50,14 @@ async function state(){
   let s = await state();
   assert('①d 建檔 3 句並跳轉專案區', s.docCount===1, `docs=${s.docCount}`);
 
-  /* ── ② 專案管理區：資料夾／指派／搜尋 ── */
-  await page.click('#btn-new-folder');   // prompt 回「測試資料夾」
+  /* ── ② 專案管理區：資料夾（Modal）／指派／搜尋（無結果提示） ── */
+  await page.click('#btn-new-folder');
+  await page.waitForSelector('#folder-name-input');
+  await page.evaluate(()=>{ document.getElementById('folder-name-input').value='測試資料夾'; });
+  await page.click('#folder-confirm');
   await new Promise(r=>setTimeout(r,200));
   s = await state();
-  assert('②a 新增資料夾', s.folders.length===1 && s.folders[0].name==='測試資料夾', JSON.stringify(s.folders));
+  assert('②a 新增資料夾（Modal）', s.folders.length===1 && s.folders[0].name==='測試資料夾', JSON.stringify(s.folders));
   await page.select('.doc-folder-select', s.folders[0].id);
   await new Promise(r=>setTimeout(r,200));
   const docFolder = await page.evaluate(()=>documents[0].folderId);
@@ -62,8 +65,11 @@ async function state(){
   await page.type('#project-search','不存在的檔名');
   await new Promise(r=>setTimeout(r,200));
   let rowCount = await page.$$eval('#project-tbody tr', els=>els.length);
-  assert('②c 搜尋過濾', rowCount===0, `rows=${rowCount}`);
+  const projHint = await page.$eval('#project-no-result', el=>el.style.display);
+  assert('②c 搜尋過濾＋無結果提示', rowCount===0 && projHint==='inline', `rows=${rowCount} hint=${projHint}`);
   await page.evaluate(()=>{ document.getElementById('project-search').value=''; renderProjects(); });
+  const projHint2 = await page.$eval('#project-no-result', el=>el.style.display);
+  assert('②d 清空搜尋提示消失', projHint2==='none', projHint2);
 
   /* ── ③ 翻譯工作區：Tab 確認／術語／TM 側欄／搜尋取代 ── */
   await page.click('.doc-link');
@@ -105,6 +111,12 @@ async function state(){
          JSON.stringify(s.doc.segs[0]));
   await page.evaluate(()=>{ tmSidebarPinned=false; closeTMSidebar(); });
 
+  // Toast：空搜尋按「取代」→ 出現輕量提示（取代原生 alert）
+  await page.click('#sr-replace-btn');
+  await page.waitForSelector('.toast.show', {timeout:2000});
+  const toastText = await page.$eval('.toast', el=>el.textContent);
+  assert('③h Toast 取代 alert', toastText.includes('搜尋框輸入'), toastText);
+
   // 搜尋取代 → 復原
   await page.click('#sr-query');
   await page.keyboard.type('譯文');
@@ -142,6 +154,11 @@ async function state(){
   await new Promise(r=>setTimeout(r,200));
   s = await state();
   assert('④c 刪除詞條', s.terms.length===1 && s.terms[0].ja==='二句目', JSON.stringify(s.terms));
+  await page.type('#term-search','絕對搜不到的詞');
+  await new Promise(r=>setTimeout(r,200));
+  const termHint = await page.$eval('#term-no-result', el=>el.style.display);
+  assert('④d 術語庫無結果提示', termHint==='inline', termHint);
+  await page.evaluate(()=>{ document.getElementById('term-search').value=''; termPage=1; renderTermTable(); });
 
   /* ── ⑤ 翻譯記憶：刪除紀錄 → 句段徽章退空心、譯文保留 ── */
   // 先把句 1 重新確認（Enter 套用後為未確認）
@@ -153,15 +170,22 @@ async function state(){
   assert('⑤a 重新確認', s.doc.segs[0].confirmed===true && s.tm.length===1);
   const zhBeforeDel = s.doc.segs[0].zh;
   await page.evaluate(()=>activateTab('tm'));
+  await page.type('#tm-search','絕對搜不到的記憶');
+  await new Promise(r=>setTimeout(r,200));
+  const tmHint = await page.$eval('#tm-no-result', el=>el.style.display);
+  assert('⑤a2 翻譯記憶無結果提示', tmHint==='inline', tmHint);
+  await page.evaluate(()=>{ document.getElementById('tm-search').value=''; tmPage=1; renderTMTable(); });
   await page.evaluate(()=>{ document.querySelector('#tm-tbody .row-del').click(); });
   await new Promise(r=>setTimeout(r,200));
   s = await state();
   assert('⑤b 刪TM→徽章退回、譯文保留', s.tm.length===0 && s.doc.segs[0].confirmed===false
          && s.doc.segs[0].tmId===null && s.doc.segs[0].zh===zhBeforeDel, JSON.stringify(s.doc.segs[0]));
 
-  /* ── ⑥ 幽靈畫面修正驗證：刪除目前開啟中的檔案 ── */
+  /* ── ⑥ 幽靈畫面修正驗證：刪除目前開啟中的檔案（走置中確認 Modal） ── */
   await page.evaluate(()=>activateTab('projects'));
-  await page.evaluate(()=>{ document.querySelector('#project-tbody .row-del[data-docid]').click(); });  // confirm 自動接受
+  await page.evaluate(()=>{ document.querySelector('#project-tbody .row-del[data-docid]').click(); });
+  await page.waitForSelector('.modal-overlay [data-role="ok"]');
+  await page.click('.modal-overlay [data-role="ok"]');
   await new Promise(r=>setTimeout(r,300));
   await page.evaluate(()=>activateTab('work'));
   await new Promise(r=>setTimeout(r,200));

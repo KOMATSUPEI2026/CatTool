@@ -614,7 +614,20 @@ ul, ol { list-style: none; padding: 0; }
     background:var(--surface-input);color:var(--ink);min-width:200px;
   }
   .search-box:focus{outline:none;border-color:var(--vermilion);}
+  /* margin-right:auto：把 space-between 的剩餘空間全推到右側，讓提示緊貼搜尋框 */
+  .search-no-result{font-size:12px;font-weight:600;color:var(--vermilion);white-space:nowrap;margin-right:auto;}
   .table-scroll{padding:0 4px 16px;overflow-x:auto;}
+
+  /* toast（輕量即時提示，取代原生 alert；z-index 高於 Modal 90，Modal 內驗證訊息也蓋得住） */
+  .toast{
+    position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:100;
+    background:var(--tooltip-bg);color:var(--tooltip-text);
+    font-family:"Noto Sans TC",sans-serif;font-size:14px;font-weight:600;
+    padding:10px 16px;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.3);
+    max-width:calc(100vw - 48px);opacity:0;pointer-events:none;
+    transition:opacity .2s, transform .2s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
   /* project table specifics */
   .doc-link{color:var(--vermilion);text-decoration:none;cursor:pointer;font-weight:600;white-space:nowrap;}

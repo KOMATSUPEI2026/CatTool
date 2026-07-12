@@ -115,6 +115,7 @@
     <div class="card">
       <div class="table-toolbar">
         <input class="search-box" id="project-search" placeholder="搜尋檔案名稱…">
+        <span class="search-no-result" id="project-no-result" style="display:none;">無匹配的搜尋結果</span>
         <button class="btn outline small" id="btn-new-folder">+ 新增資料夾</button>
       </div>
       <div class="table-scroll">
@@ -186,6 +187,7 @@
     <div class="card">
       <div class="table-toolbar">
         <input class="search-box" id="term-search" placeholder="搜尋原文或譯名…">
+        <span class="search-no-result" id="term-no-result" style="display:none;">無匹配的搜尋結果</span>
         <div style="display:flex;gap:16px;">
           <button class="btn outline small" id="btn-add-term">+ 新增詞條</button>
           <button class="btn outline small" id="btn-export-terms">匯出 JSON</button>
@@ -210,6 +212,7 @@
     <div class="card">
       <div class="table-toolbar">
         <input class="search-box" id="tm-search" placeholder="搜尋原文或譯文…">
+        <span class="search-no-result" id="tm-no-result" style="display:none;">無匹配的搜尋結果</span>
         <div style="display:flex;gap:16px;">
           <button class="btn outline small" id="btn-export-tm">匯出 JSON</button>
           <label class="btn outline small" style="margin:0;">
@@ -286,8 +289,8 @@ let currentDocId = null;
 let collapsedFolders = new Set();
 
 const VIEW_MODES = [
-  {key:'review', label:'校閱模式（左右）'},
-  {key:'translate', label:'翻譯模式（上下）'},
+  {key:'review', label:'校閱模式'},
+  {key:'translate', label:'翻譯模式'},
   {key:'readonly', label:'純譯文模式'}
 ];
 let viewModeIdx = 0;
@@ -488,6 +491,7 @@ function renderProjects(){
 
   if(documents.length===0){
     empty.style.display='block';
+    document.getElementById('project-no-result').style.display = 'none';
     updateStats();
     return;
   }
@@ -515,11 +519,13 @@ function renderProjects(){
   }
 
   if(kw){
-    documents.filter(d=>d.name.toLowerCase().includes(kw))
-      .forEach(d=> tbody.insertAdjacentHTML('beforeend', docRowHtml(d)));
+    const matched = documents.filter(d=>d.name.toLowerCase().includes(kw));
+    document.getElementById('project-no-result').style.display = matched.length===0 ? 'inline' : 'none';
+    matched.forEach(d=> tbody.insertAdjacentHTML('beforeend', docRowHtml(d)));
     updateStats();
     return;
   }
+  document.getElementById('project-no-result').style.display = 'none';
 
   folders.forEach(f=>{
     const docsInFolder = documents.filter(d=>d.folderId===f.id);
@@ -550,6 +556,7 @@ function renderTermTable(){
   tbody.innerHTML='';
   const filtered = termBase.filter(t => !kw || t.ja.includes(kw) || t.zh.includes(kw));
   empty.style.display = termBase.length===0 ? 'block' : 'none';
+  document.getElementById('term-no-result').style.display = (kw && filtered.length===0) ? 'inline' : 'none';
   termPage = clampPage(termPage, filtered.length);
   filtered
     .slice((termPage-1)*PAGE_SIZE, termPage*PAGE_SIZE)
@@ -577,6 +584,7 @@ function renderTMTable(){
   tbody.innerHTML='';
   const filtered = tmSegments.filter(t => !kw || t.ja.includes(kw) || t.zh.includes(kw));
   empty.style.display = tmSegments.length===0 ? 'block' : 'none';
+  document.getElementById('tm-no-result').style.display = (kw && filtered.length===0) ? 'inline' : 'none';
   tmPage = clampPage(tmPage, filtered.length);
   filtered.slice((tmPage-1)*PAGE_SIZE, tmPage*PAGE_SIZE).forEach(t=>{
     const tr = document.createElement('tr');
@@ -637,10 +645,10 @@ document.getElementById('sr-query').addEventListener('input', (e)=>{
 
 document.getElementById('sr-replace-btn').addEventListener('click', ()=>{
   const doc = getCurrentDoc();
-  if(!doc){ alert('請先開啟一個檔案'); return; }
-  if(!srQuery){ alert('請先在搜尋框輸入要搜尋的譯文字詞'); return; }
+  if(!doc){ showToast('請先開啟一個檔案'); return; }
+  if(!srQuery){ showToast('請先在搜尋框輸入要搜尋的譯文字詞'); return; }
   const n = srCountOccurrences();
-  if(n === 0){ alert('目前檔案的譯文中找不到「' + srQuery + '」'); return; }
+  if(n === 0){ showToast('目前檔案的譯文中找不到「' + srQuery + '」'); return; }
   const replaceWith = document.getElementById('sr-replace').value;
   openSRConfirmModal(n, replaceWith);
 });
@@ -688,9 +696,9 @@ function executeSearchReplace(replaceWith){
 }
 
 document.getElementById('sr-undo-btn').addEventListener('click', ()=>{
-  if(!srUndoSnapshot){ alert('目前沒有可復原的取代'); return; }
+  if(!srUndoSnapshot){ showToast('目前沒有可復原的取代'); return; }
   const doc = documents.find(d=>d.id===srUndoSnapshot.docId);
-  if(!doc){ alert('找不到原檔案，無法復原'); srUndoSnapshot=null; return; }
+  if(!doc){ showToast('找不到原檔案，無法復原'); srUndoSnapshot=null; return; }
   srUndoSnapshot.items.forEach(item=>{
     const seg = doc.segments.find(s=>s.id===item.segId);
     if(seg){ seg.zh = item.zh; seg.confirmed = item.confirmed; seg.tmId = item.tmId; }
@@ -1331,8 +1339,8 @@ function openTermModal(existingTerm, prefillJa){
   document.getElementById('modal-confirm').addEventListener('click', ()=>{
     const jaV = document.getElementById('modal-ja').value.trim();
     const zhV = document.getElementById('modal-zh').value.trim();
-    if(!jaV || !zhV){ alert('原文與譯名都不能空白'); return; }
-    if(zhV.split(/[;；]/).map(x=>x.trim()).filter(Boolean).length > 9){ alert('中文譯名最多只能儲存 9 個'); return; }
+    if(!jaV || !zhV){ showToast('原文與譯名都不能空白'); return; }
+    if(zhV.split(/[;；]/).map(x=>x.trim()).filter(Boolean).length > 9){ showToast('中文譯名最多只能儲存 9 個'); return; }
     const noteV = document.getElementById('modal-note').value.trim();
     if(isEdit){
       existingTerm.ja = jaV; existingTerm.zh = zhV; existingTerm.note = noteV;
@@ -1373,7 +1381,7 @@ document.getElementById('btn-reset-confirm').addEventListener('click', ()=>{
   const doc = getCurrentDoc();
   if(!doc) return;
   const n = doc.segments.filter(s=>s.confirmed).length;
-  if(n === 0){ alert('目前檔案沒有已確認的句段。'); return; }
+  if(n === 0){ showToast('目前檔案沒有已確認的句段。'); return; }
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -1454,7 +1462,7 @@ function bindSegToolSelect(listEl, sel){
 document.getElementById('btn-seg-edit').addEventListener('click', ()=>{
   const doc = getCurrentDoc();
   if(!doc) return;
-  if(doc.segments.length === 0){ alert('目前檔案沒有句段。'); return; }
+  if(doc.segments.length === 0){ showToast('目前檔案沒有句段。'); return; }
   // 工作副本：segId 對回原句段；分割出的新句 segId 為 null（送出時才生效）
   let items = doc.segments.map(s=>({segId:s.id, ja:s.ja}));
   const overlay = segToolOverlay('編輯／分割句子', '可直接修改原文；游標放入句子內，再按 Enter 可分割句子。清空的句子送出後將被移除。');
@@ -1522,7 +1530,7 @@ document.getElementById('btn-seg-edit').addEventListener('click', ()=>{
 document.getElementById('btn-seg-reorder').addEventListener('click', ()=>{
   const doc = getCurrentDoc();
   if(!doc) return;
-  if(doc.segments.length < 2){ alert('至少需要兩個句段才能排序。'); return; }
+  if(doc.segments.length < 2){ showToast('至少需要兩個句段才能排序。'); return; }
   const overlay = segToolOverlay('排序句子', '按住任一句段上下拖曳調整順序，按「送出」後生效。');
   const listEl = overlay.querySelector('.seg-tool-list');
   listEl.innerHTML = doc.segments.map((seg,i)=>`
@@ -1569,7 +1577,7 @@ document.getElementById('btn-seg-reorder').addEventListener('click', ()=>{
 document.getElementById('btn-seg-merge').addEventListener('click', ()=>{
   const doc = getCurrentDoc();
   if(!doc) return;
-  if(doc.segments.length < 2){ alert('至少需要兩個句段才能合併。'); return; }
+  if(doc.segments.length < 2){ showToast('至少需要兩個句段才能合併。'); return; }
   const overlay = segToolOverlay('合併句子', '選取兩個以上「相鄰」的句子後送出；原文與譯文都會串接，合併後退回未確認。');
   const listEl = overlay.querySelector('.seg-tool-list');
   listEl.innerHTML = doc.segments.map((seg,i)=>segToolItemHtml(seg, i)).join('');
@@ -1649,7 +1657,7 @@ document.getElementById('btn-seg-add').addEventListener('click', ()=>{
 document.getElementById('btn-seg-delete').addEventListener('click', ()=>{
   const doc = getCurrentDoc();
   if(!doc) return;
-  if(doc.segments.length === 0){ alert('目前檔案沒有句段。'); return; }
+  if(doc.segments.length === 0){ showToast('目前檔案沒有句段。'); return; }
   const overlay = segToolOverlay('刪除句子', '選取要刪除的句子後送出；刪除後無法復原，翻譯記憶紀錄保留不動。');
   const listEl = overlay.querySelector('.seg-tool-list');
   listEl.innerHTML = doc.segments.map((seg,i)=>{
@@ -1727,11 +1735,11 @@ function syncLangGate(){
 
 /* ---------------- 入稿工作區：建立檔案 ---------------- */
 document.getElementById('btn-segment').addEventListener('click', ()=>{
-  if(!langPairReady()){ alert('請先選擇來源與目標語系（兩者不可相同）。'); return; }
+  if(!langPairReady()){ showToast('請先選擇來源與目標語系（兩者不可相同）。'); return; }
   const {src, tgt} = getLangPair();
   const raw = document.getElementById('raw-input').value;
   const parts = segmentText(raw);
-  if(parts.length===0){ alert(`請先貼上${langName(src)}原文`); return; }
+  if(parts.length===0){ showToast(`請先貼上${langName(src)}原文`); return; }
   const nameInput = document.getElementById('doc-name-input');
   const name = uniqueDocName(nameInput.value.trim() || ('未命名文件' + (documents.length+1)));
   const now = Date.now();
@@ -1972,24 +1980,36 @@ document.getElementById('project-tbody').addEventListener('click', (e)=>{
   const fdel = e.target.closest('.folder-del');
   if(fdel){
     const fid = fdel.dataset.folderid;
-    if(!confirm('刪除這個資料夾？裡面的檔案會移回未分類，不會被刪除。')) return;
-    documents.forEach(d=>{ if(d.folderId===fid) d.folderId=null; });
-    folders = folders.filter(f=>f.id!==fid);
-    renderProjects();
+    openConfirmModal({
+      title:'刪除資料夾',
+      text:'刪除這個資料夾？<br>裡面的檔案會移回未分類，不會被刪除。',
+      cancelLabel:'取消', okLabel:'確定刪除',
+      onOk: ()=>{
+        documents.forEach(d=>{ if(d.folderId===fid) d.folderId=null; });
+        folders = folders.filter(f=>f.id!==fid);
+        renderProjects();
+      }
+    });
     return;
   }
   const rdel = e.target.closest('.row-del');
   if(rdel && rdel.dataset.docid){
     const did = rdel.dataset.docid;
-    if(!confirm('刪除這個檔案？所有句段內容將會遺失。')) return;
-    documents = documents.filter(d=>d.id!==did);
-    if(currentDocId===did){
-      // 刪的是目前開啟中的檔案：立即重繪工作區，避免殘留舊句段畫面（打字會靜默丟失）
-      currentDocId = null;
-      renderSegments();
-      renderTMSidebar();
-    }
-    renderProjects();
+    openConfirmModal({
+      title:'刪除檔案',
+      text:'刪除這個檔案？<br>所有句段內容將會遺失（翻譯記憶保留不動）。',
+      cancelLabel:'取消', okLabel:'確定刪除',
+      onOk: ()=>{
+        documents = documents.filter(d=>d.id!==did);
+        if(currentDocId===did){
+          // 刪的是目前開啟中的檔案：立即重繪工作區，避免殘留舊句段畫面（打字會靜默丟失）
+          currentDocId = null;
+          renderSegments();
+          renderTMSidebar();
+        }
+        renderProjects();
+      }
+    });
     return;
   }
   const folderRow = e.target.closest('.proj-folder-row');
@@ -2008,10 +2028,36 @@ document.getElementById('project-tbody').addEventListener('change', (e)=>{
 });
 document.getElementById('project-search').addEventListener('input', renderProjects);
 document.getElementById('btn-new-folder').addEventListener('click', ()=>{
-  const name = prompt('新增資料夾名稱：', '新資料夾');
-  if(!name || !name.trim()) return;
-  folders.push({id:cid(), name:name.trim()});
-  renderProjects();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <h3>新增資料夾</h3>
+      <div class="modal-field">
+        <label>資料夾名稱</label>
+        <input type="text" id="folder-name-input" value="新資料夾">
+      </div>
+      <div class="modal-actions">
+        <button class="btn outline small" id="folder-cancel">取消</button>
+        <button class="btn vermilion small" id="folder-confirm">新增</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const input = document.getElementById('folder-name-input');
+  input.focus(); input.select();
+  function submit(){
+    const name = input.value.trim();
+    if(!name){ showToast('請輸入資料夾名稱'); return; }
+    folders.push({id:cid(), name});
+    overlay.remove();
+    renderProjects();
+  }
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('folder-cancel').addEventListener('click', ()=>overlay.remove());
+  document.getElementById('folder-confirm').addEventListener('click', submit);
+  input.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && !e.isComposing && e.keyCode!==229) submit();
+  });
 });
 
 /* 術語庫 */
@@ -2046,7 +2092,7 @@ document.getElementById('term-tbody').addEventListener('change', (e)=>{
   if(e.target.dataset.field !== 'zh') return;
   const parts = e.target.value.split(/[;；]/).map(x=>x.trim()).filter(Boolean);
   if(parts.length > 9){
-    alert('中文譯名最多只能儲存 9 個，已保留前 9 個');
+    showToast('中文譯名最多只能儲存 9 個，已保留前 9 個');
     const trimmed = parts.slice(0,9).join(';');
     e.target.value = trimmed;
     const t = termBase.find(t=>t.id===e.target.dataset.id);
@@ -2070,7 +2116,7 @@ document.getElementById('btn-export-terms').addEventListener('click', ()=>{
 });
 document.getElementById('file-import-terms').addEventListener('change', (e)=>{
   importJSON(e.target.files[0], (data)=>{
-    if(!Array.isArray(data)) return alert('檔案格式不正確（需為陣列）');
+    if(!Array.isArray(data)) return showToast('檔案格式不正確（需為陣列）');
     data.forEach(d=>{
       const sl = d.srcLang||'ja', tl = d.tgtLang||'zh-TW';
       const src = d[sl] !== undefined ? d[sl] : d.ja;   // 新格式動態鍵，退回舊格式 ja
@@ -2122,7 +2168,7 @@ document.getElementById('btn-export-tm').addEventListener('click', ()=>{
 });
 document.getElementById('file-import-tm').addEventListener('change', (e)=>{
   importJSON(e.target.files[0], (data)=>{
-    if(!Array.isArray(data)) return alert('檔案格式不正確（需為陣列）');
+    if(!Array.isArray(data)) return showToast('檔案格式不正確（需為陣列）');
     data.forEach(d=>{
       const sl = d.srcLang||'ja', tl = d.tgtLang||'zh-TW';
       const src = d[sl] !== undefined ? d[sl] : d.ja;
@@ -2133,6 +2179,45 @@ document.getElementById('file-import-tm').addEventListener('change', (e)=>{
   });
   e.target.value='';
 });
+
+/* 通用：Toast 輕量提示（取代原生 alert；單例，新訊息頂掉舊的） */
+let toastTimer = null;
+function showToast(msg){
+  document.querySelector('.toast')?.remove();
+  if(toastTimer){ clearTimeout(toastTimer); toastTimer = null; }
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  toastTimer = setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(()=>el.remove(), 200);   // 等淡出動畫跑完
+    toastTimer = null;
+  }, 2400);
+}
+
+/* 通用：置中確認 Modal（取代原生 confirm；比照「重置確認狀態」樣式） */
+function openConfirmModal({title, text, cancelLabel='取消', okLabel='確定', onOk}){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-center">
+      <h3>${escapeHtml(title)}</h3>
+      <p class="modal-confirm-text">${text}</p>
+      <div class="modal-actions modal-actions-center">
+        <button class="btn outline large" data-role="cancel">${escapeHtml(cancelLabel)}</button>
+        <button class="btn vermilion large" data-role="ok">${escapeHtml(okLabel)}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('[data-role="cancel"]').addEventListener('click', ()=>overlay.remove());
+  overlay.querySelector('[data-role="ok"]').addEventListener('click', ()=>{
+    overlay.remove();
+    onOk();
+  });
+}
 
 /* 通用：匯出 / 匯入 JSON（純前端，不使用 localStorage） */
 function downloadJSON(data, filename){
@@ -2148,7 +2233,7 @@ function importJSON(file, cb){
   const reader = new FileReader();
   reader.onload = ()=>{
     try{ cb(JSON.parse(reader.result)); }
-    catch(err){ alert('JSON 解析失敗：' + err.message); }
+    catch(err){ showToast('JSON 解析失敗：' + err.message); }
   };
   reader.readAsText(file);
 }

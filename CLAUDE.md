@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概要
 
-「校譯台」（cat-tool-demo）：自製網頁版 CAT（電腦輔助翻譯）工具，取代 Termsoup，主力工作流為日文→繁體中文書籍翻譯（現已支援 14 語系配對）。純 HTML + CSS + 原生 JavaScript，兩檔：`cat-tool-demo.html`（結構＋JS，約 2280 行）＋`cat-tool.css`（樣式約 640 行，頂部含現代精簡 reset，勿改回 Meyer 式全歸零）。無建置系統、無套件管理；自動化測試獨立放在 `tests/`（Puppeteer，不影響主程式零依賴）。
+「校譯台」（cat-tool-demo）：自製網頁版 CAT（電腦輔助翻譯）工具，取代 Termsoup，主力工作流為日文→繁體中文書籍翻譯（現已支援 14 語系配對）。純 HTML + CSS + 原生 JavaScript，兩檔：`cat-tool-demo.html`（結構＋JS，約 2380 行）＋`cat-tool.css`（樣式約 660 行，頂部含現代精簡 reset，勿改回 Meyer 式全歸零）。無建置系統、無套件管理；自動化測試獨立放在 `tests/`（Puppeteer，不影響主程式零依賴）。
 
 外部依賴僅來自 CDN（首次開啟需網路）：Google Fonts、SheetJS 0.18.5（xlsx 解析）、Bootstrap Icons 1.11.3。資料全部存在瀏覽器記憶體，重新整理即清空；各分頁支援 JSON 匯出/匯入備份。目前尚無任何後端或網路請求程式碼。
 

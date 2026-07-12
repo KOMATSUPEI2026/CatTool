@@ -1,18 +1,18 @@
-# 校譯台（cat-tool-demo）交接文件 V38
+# 校譯台（cat-tool-demo）交接文件 V39
 
 > 用途：在 Claude Code 中以本文件 + cat-tool-demo.html + cat-tool.css 接續開發。
-> 目前版本：**第 38 版**（V23 → V38 演進，變更摘要見下）
-> 上一份交接文件版本：V23。本文件已整併 V24–V38 全部變更與討論結論。
+> 目前版本：**第 39 版**（V23 → V39 演進，變更摘要見下）
+> 上一份交接文件版本：V23。本文件已整併 V24–V39 全部變更與討論結論。
 
 ## 專案概要
 
 - **目標**：自製網頁版 CAT（電腦輔助翻譯）工具，取代停止服務的 Termsoup，主力工作流為日文→繁體中文書籍翻譯（插畫技法書），已支援多語系配對
-- **技術**：純 HTML + CSS + 原生 JavaScript。V38 起兩檔：`cat-tool-demo.html`（結構＋JS，約 2280 行）＋`cat-tool.css`（樣式，約 640 行，含頂部現代精簡 reset）——為 React 重構鋪路（自訂 CSS 屆時直接 import）
+- **技術**：純 HTML + CSS + 原生 JavaScript。V38 起兩檔：`cat-tool-demo.html`（結構＋JS，約 2380 行）＋`cat-tool.css`（樣式，約 660 行，含頂部現代精簡 reset）——為 React 重構鋪路（自訂 CSS 屆時直接 import）
 - **外部依賴（CDN，首次開啟需網路）**：Google Fonts（Noto Serif TC / Sans TC / Serif JP）、SheetJS 0.18.5（xlsx 解析）、Bootstrap Icons 1.11.3（全站圖示）。V23 的「零依賴」原則已在 V26/V30 經使用者同意打破
 - **資料**：全部存在瀏覽器記憶體，重新整理即清空；各分頁支援 JSON 匯出/匯入備份
 - **開發環境**：M2 MacBook Air，本機瀏覽器直開 HTML
 
-## V24–V38 版本演進摘要
+## V24–V39 版本演進摘要
 
 | 版本 | 變更 |
 |---|---|
@@ -31,6 +31,7 @@
 | V36 | **句段整理五功能**（仿 Termsoup Modal 式）：編輯/分割、拖曳排序、相鄰合併（譯文串接）、新增、多選刪除；情境列 5 icon 鈕 |
 | V37 | **快捷標點符號列**（仿 Termsoup）：固定視窗下緣、10 格可自訂、Ctrl/Alt+Shift+1~0；配對括號停中間/包反白；**V28 補齊**——insertIntoSeg 一律退回未確認（術語帶入自此也適用） |
 | V38 | **CSS 抽離**成獨立 `cat-tool.css`（React 重構鋪路）＋**現代精簡 reset**（裁剪自 Comeau/Bell，7 條；明確不採 Meyer 原版與 line-height:1）。後續五分頁健檢修 3 bug：刪除開啟中檔案的幽靈畫面（工作區即時重繪）、TM 側欄 Shift+Tab 誤改寫記憶、術語庫「+新增詞條」配對改為跟隨目前檔案（與反白新增一致） |
+| V39 | **UI 一致性**：三搜尋框加「無匹配的搜尋結果」朱紅提示；原生對話框歸零——confirm×2→置中確認 Modal（openConfirmModal）、prompt→新增資料夾 Modal、alert×18→Toast（showToast，頂部置中 2.4s 自動消失、z-index 100 蓋 Modal） |
 
 ## 資料模型（核心）
 
@@ -100,7 +101,7 @@ folders    = [{ id, name }]
 - **配色（亮色）**：紙 #E7E4DC / 卡片 #FBFAF7 / 墨 #272522 / 朱紅 #B33A2E / teal #1F5C5C；暗黑模式有對應變數；進度條專用 --progress-translate / --progress-confirm（淺一階 60% 透明，雙主題）
 - **字體**：UI=Noto Sans TC；標題/分頁/徽章=Noto Serif TC；日文原文=Noto Serif JP
 - **刻度**：字級僅 10/12/14/16/24px；spacing 全偶數 px 禁 .5；圓角 2/4/6/8/10/20px + 50%；唯一奇數例外=1px 邊框。標記 ×scale 的屬性乘 --text-scale / --side-scale / --ui-pad-scale
-- **V24–V36 新元件刻度**：頁碼鈕 12px/28×28/radius 4（active 朱紅底白字）；進度條軌 8px 高/radius 10；膠囊 radius 20/按鈕 padding 10 8；語系 select 14px/padding 8 10/radius 4；拖放區 2px dashed/radius 6/padding 40 16；加寬 Modal 440px；句段整理 Modal 720px（modal-card-xl）/清單 max-height 56vh/項目 padding 10 12/警示標籤 10px/radius 4；標點列 bottom 12/padding 8 12/radius 20、鍵 36×36 radius 50%/符號 16px/角標 10px（14×14 teal 底）
+- **V24–V36 新元件刻度**：頁碼鈕 12px/28×28/radius 4（active 朱紅底白字）；進度條軌 8px 高/radius 10；膠囊 radius 20/按鈕 padding 10 8；語系 select 14px/padding 8 10/radius 4；拖放區 2px dashed/radius 6/padding 40 16；加寬 Modal 440px；句段整理 Modal 720px（modal-card-xl）/清單 max-height 56vh/項目 padding 10 12/警示標籤 10px/radius 4；標點列 bottom 12/padding 8 12/radius 20、鍵 36×36 radius 50%/符號 16px/角標 10px（14×14 teal 底）；Toast top 24/padding 10 16/radius 6/14px（--tooltip-bg 雙主題）；無結果提示 12px 朱紅
 - 詳細元件刻度表沿用 V23 交接文件（本次未變更的元件全部維持原值）
 
 ## 已知注意事項（血淚教訓，Claude Code 必讀）
