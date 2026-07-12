@@ -2225,8 +2225,8 @@ function openConfirmModal({title, text, cancelLabel='取消', okLabel='確定', 
 function openShortcutsModal(){
   const rows = [
     {scene:'翻譯工作區・譯文欄', keys:['Tab'],                                desc:'確認句段並存入翻譯記憶'},
-    {scene:'術語卡片顯示時',     keys:['Mac Ctrl+1~9','Win Alt+1~9'],         desc:'帶入對應編號的譯名'},
-    {scene:'快捷標點列',         keys:['Mac Ctrl+Shift+1~0','Win Alt+Shift+1~0'], desc:'插入第 1~10 格符號'},
+    {scene:'術語卡片顯示時',     keys:['Mac Ctrl+1~9','Win Alt+1~9'],         desc:''},
+    {scene:'快捷標點列',         keys:['Mac Ctrl+Shift+1~0','Win Alt+Shift+1~0'], desc:''},
     {scene:'記憶側欄卡片',       keys:['Tab'],                                desc:'更新該筆翻譯記憶'},
     {scene:'記憶側欄卡片',       keys:['Enter'],                              desc:'套用譯文至目前句段'},
     {scene:'編輯/分割視窗',      keys:['Enter'],                              desc:'於游標處分割句子'},
@@ -2240,7 +2240,7 @@ function openShortcutsModal(){
         ${rows.map(r=>`
           <div class="shortcut-row">
             <span class="shortcut-scene">${r.scene}</span>
-            <span>${r.keys.map(k=>`<span class="kbd">${k}</span>`).join('／')}　${r.desc}</span>
+            <span>${r.keys.map(k=>`<span class="kbd">${k}</span>`).join('／')}${r.desc ? '　'+r.desc : ''}</span>
           </div>`).join('')}
       </div>
       <div class="modal-actions modal-actions-center">
