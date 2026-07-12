@@ -15,7 +15,7 @@
   <div class="welcome-card">
     <span class="seal-mark">校</span>
     <h2>校譯台</h2>
-    <p class="welcome-tagline">術語比對・翻譯記憶　試作版 Demo</p>
+    <p class="welcome-tagline">術語比對・翻譯記憶</p>
     <button class="btn vermilion large welcome-btn" id="welcome-google"><i class="bi bi-google"></i> 使用 Google 登入</button>
     <button class="btn outline large welcome-btn" id="welcome-guest"><i class="bi bi-person"></i> 以訪客身分使用</button>
     <p class="welcome-hint">登入後可將文件、術語庫與翻譯記憶儲存至 Google 試算表；<br>訪客模式資料僅存於瀏覽器記憶體，重新整理即清空。</p>
@@ -28,7 +28,7 @@
       <span class="seal-mark">校</span>
       <div>
         <h1>校譯台</h1>
-        <div class="tagline">術語比對・翻譯記憶　試作版 Demo</div>
+        <div class="tagline">術語比對・翻譯記憶</div>
       </div>
     </div>
     <div class="header-right">
@@ -39,7 +39,7 @@
       </div>
       <div class="header-actions">
         <button class="icon-btn" id="btn-account" title="點擊連結 Google 帳號"><i class="bi bi-person"></i> 訪客模式</button>
-        <button class="icon-btn" id="btn-shortcuts"><i class="bi bi-keyboard"></i> 快捷鍵說明</button>
+        <button class="icon-btn" id="btn-shortcuts"><i class="bi bi-keyboard"></i> 快捷鍵</button>
         <button class="icon-btn" id="btn-dark-mode"><i class="bi bi-moon"></i> 暗黑模式</button>
         <button class="icon-btn" id="btn-text-scale"><i class="bi bi-zoom-in"></i> 防老花模式：1x</button>
         <button class="icon-btn" id="btn-cloud-save" title="將文件、術語庫與翻譯記憶儲存至 Google 試算表"><i class="bi bi-cloud-arrow-up"></i> 儲存至雲端</button>
@@ -691,7 +691,7 @@ function openAccountModal(){
         ${linkRow('翻譯記憶', ids.tm)}
       </div>
       <div class="modal-field">
-        <label>重新連結試算表（貼上網址自動辨識是哪份表，成功後會接著詢問是否載入）</label>
+        <label>重新連結試算表（貼上網址自動辨識，成功後會詢問是否載入）</label>
         <input type="text" id="relink-input" placeholder="https://docs.google.com/spreadsheets/d/…">
       </div>
       <div class="modal-actions">
@@ -2704,7 +2704,7 @@ function openShortcutsModal(){
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
     <div class="modal-card modal-card-wide">
-      <h3>快捷鍵說明</h3>
+      <h3>快捷鍵</h3>
       <div class="shortcut-list">
         ${rows.map(r=>`
           <div class="shortcut-row">
