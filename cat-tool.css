@@ -546,6 +546,14 @@ ul, ol { list-style: none; padding: 0; }
   .btn.welcome-btn{width:240px;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
   .welcome-hint{font-size:12px;color:var(--ink-soft);line-height:1.8;margin:10px 0 0;}
 
+  /* 帳號 Modal（email＋三表連結狀態＋貼網址重連） */
+  .account-email{font-size:14px;color:var(--ink);margin:0 0 12px;}
+  .cloud-links{display:flex;flex-direction:column;gap:8px;margin:0 0 14px;font-size:12px;}
+  .cloud-link-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--ink-soft);}
+  .cloud-link-row a{color:var(--vermilion);text-decoration:none;}
+  .cloud-link-row a:hover{text-decoration:underline;}
+  .cloud-none{color:var(--ink-soft);}
+
   /* 快捷鍵說明 Modal */
   .shortcut-list{display:flex;flex-direction:column;gap:10px;margin:14px 0 4px;}
   .shortcut-row{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--ink);line-height:1.6;}

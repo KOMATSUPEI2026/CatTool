@@ -37,6 +37,7 @@
         <span>記憶句段　<b id="stat-tm">0</b></span>
         <span>文件數　<b id="stat-docs">0</b></span>
       </div>
+      <button class="icon-btn" id="btn-cloud-save" title="將文件、術語庫與翻譯記憶儲存至 Google 試算表"><i class="bi bi-cloud-arrow-up"></i> 儲存至雲端</button>
       <button class="icon-btn" id="btn-account" title="點擊連結 Google 帳號"><i class="bi bi-person"></i> 訪客模式</button>
       <button class="icon-btn" id="btn-shortcuts"><i class="bi bi-keyboard"></i> 快捷鍵說明</button>
       <button class="icon-btn" id="btn-dark-mode"><i class="bi bi-moon"></i> 暗黑模式</button>
@@ -319,6 +320,7 @@ const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.
 let googleAuth = { token:null, email:null, expiresAt:0 };
 let _tokenClient = null;
 let _authWaiters = [];
+let _skipAutoLoadOnce = false;   // 401 重授權/儲存前登入時，不觸發登入後自動載入
 
 function _settleAuthWaiters(ok){
   _authWaiters.forEach(w=> ok ? w.resolve() : w.reject(new Error('auth-failed')));
@@ -342,6 +344,8 @@ function initTokenClient(){
       hideWelcomePanel();
       showToast(googleAuth.email ? '已登入：' + googleAuth.email : 'Google 帳號已連結');
       _settleAuthWaiters(true);
+      if(!_skipAutoLoadOnce) tryAutoLoadFromCloud();
+      _skipAutoLoadOnce = false;
     },
     error_callback: (err)=>{
       showToast('無法完成 Google 授權：' + (err.type || err.message || '未知錯誤'));
@@ -349,7 +353,8 @@ function initTokenClient(){
     }
   });
 }
-function requestGoogleLogin(){
+function requestGoogleLogin(opts = {}){
+  _skipAutoLoadOnce = !!opts.skipAutoLoad;
   initTokenClient();
   if(!_tokenClient){
     showToast('Google 登入元件尚未載入，請確認網路後再試');
@@ -379,14 +384,17 @@ function renderAccountStatus(){
     : '<i class="bi bi-person"></i> 訪客模式';
   btn.title = googleAuth.token ? '點擊登出 Google 帳號' : '點擊連結 Google 帳號';
 }
-document.getElementById('btn-account').addEventListener('click', ()=>{
-  if(!googleAuth.token){ requestGoogleLogin().catch(()=>{}); return; }
+function openLogoutConfirm(){
   openConfirmModal({
     title:'登出 Google',
-    text:'登出後回到訪客模式，畫面上的資料保留不動，<br>但僅存在瀏覽器記憶體，請記得匯出 JSON 備份。',
+    text:'登出後回到訪客模式，畫面上的資料保留不動，<br>但僅存在瀏覽器記憶體，請記得先儲存至雲端或匯出 JSON。',
     cancelLabel:'取消', okLabel:'確定登出',
     onOk: logoutGoogle
   });
+}
+document.getElementById('btn-account').addEventListener('click', ()=>{
+  if(!googleAuth.token){ requestGoogleLogin().catch(()=>{}); return; }
+  openAccountModal();
 });
 
 /* 歡迎面板：登入成功或選訪客後移除 */
@@ -406,10 +414,288 @@ if(sheetsApi){
   sheetsApi.interceptors.response.use(null, async (err)=>{
     if(err.response?.status === 401 && !err.config._retried){
       err.config._retried = true;
-      await requestGoogleLogin();   // token 過期：重新彈授權視窗，完成後重試原請求
+      await requestGoogleLogin({skipAutoLoad:true});   // token 過期：重新彈授權視窗，完成後重試原請求
       return sheetsApi(err.config);
     }
     return Promise.reject(err);
+  });
+}
+
+/* ---------------- Google Sheets 讀寫：三份試算表全量覆寫＋登入自動載入 ----------------
+   文件庫（_索引/_資料夾 常駐＋每文件一分頁）、術語庫、翻譯記憶。
+   spreadsheetId 存 localStorage（只存 ID 不存資料）；scope 不能搜 Drive，遺失以貼網址重連復原 */
+const SHEET_IDS_KEY = 'catToolSheetIds';
+const SHEET_FILE_TITLES = { docs:'校譯台－文件庫', terms:'校譯台－術語庫', tm:'校譯台－翻譯記憶' };
+const INDEX_HEADER  = ['docId','檔名','資料夾ID','srcLang','tgtLang','createdAt','updatedAt','分頁標題'];
+const FOLDER_HEADER = ['folderId','名稱'];
+const DOC_HEADER    = ['segId','srcNo','原文','譯文','confirmed','tmId'];
+const TERM_HEADER   = ['id','原文','譯名','備註','出處','srcLang','tgtLang'];
+const TM_HEADER     = ['id','原文','譯文','出處','srcLang','tgtLang'];
+
+function loadSheetIds(){
+  try{ return JSON.parse(localStorage.getItem(SHEET_IDS_KEY)) || {}; }
+  catch(_){ return {}; }
+}
+function saveSheetIds(ids){ localStorage.setItem(SHEET_IDS_KEY, JSON.stringify(ids)); }
+
+/* 分頁標題不可含 []/\*?: 與引號、不可撞常駐分頁；重名加 (2) 尾碼，實際標題記回 _索引 */
+function sheetTitleForDoc(name, used){
+  let t = String(name || '未命名').replace(/[\[\]\/\\\*\?:'"]/g, '·').slice(0, 60).trim() || '未命名';
+  if(t.startsWith('_')) t = '·' + t.slice(1);
+  let final = t, n = 2;
+  while(used.has(final)) final = t + ' (' + (n++) + ')';
+  used.add(final);
+  return final;
+}
+
+function serializeForCloud(){
+  const used = new Set(['_索引', '_資料夾']);
+  const docSheets = documents.map(d=>({
+    title: sheetTitleForDoc(d.name, used),
+    doc: d,
+    rows: d.segments.map(s=>[s.id, s.srcNo ?? '', s.ja || '', s.zh || '', s.confirmed ? 'TRUE' : 'FALSE', s.tmId || ''])
+  }));
+  return {
+    docSheets,
+    indexRows:  docSheets.map(ds=>[ds.doc.id, ds.doc.name, ds.doc.folderId || '', ds.doc.srcLang || '',
+                                   ds.doc.tgtLang || '', String(ds.doc.createdAt || ''), String(ds.doc.updatedAt || ''), ds.title]),
+    folderRows: folders.map(f=>[f.id, f.name]),
+    termRows:   termBase.map(t=>[t.id, t.ja || '', t.zh || '', t.note || '', t.source || '', t.srcLang || '', t.tgtLang || '']),
+    tmRows:     tmSegments.map(t=>[t.id, t.ja || '', t.zh || '', t.source || '', t.srcLang || '', t.tgtLang || ''])
+  };
+}
+
+/* 缺哪份建哪份；建立時一併寫好標記分頁（載入與貼網址辨識都認這些分頁名） */
+async function ensureCloudFiles(){
+  const ids = loadSheetIds();
+  if(!ids.docs){
+    const r = await sheetsApi.post('', { properties:{title:SHEET_FILE_TITLES.docs},
+      sheets:[{properties:{title:'_索引'}}, {properties:{title:'_資料夾'}}] });
+    ids.docs = r.data.spreadsheetId;
+  }
+  if(!ids.terms){
+    const r = await sheetsApi.post('', { properties:{title:SHEET_FILE_TITLES.terms},
+      sheets:[{properties:{title:'術語庫'}}] });
+    ids.terms = r.data.spreadsheetId;
+  }
+  if(!ids.tm){
+    const r = await sheetsApi.post('', { properties:{title:SHEET_FILE_TITLES.tm},
+      sheets:[{properties:{title:'翻譯記憶'}}] });
+    ids.tm = r.data.spreadsheetId;
+  }
+  saveSheetIds(ids);
+  return ids;
+}
+
+let _cloudBusy = false;
+async function saveAllToCloud(){
+  if(_cloudBusy) return;
+  if(!googleAuth.token){
+    openConfirmModal({
+      title:'尚未連結 Google',
+      text:'儲存至雲端前，請先登入 Google 帳號。',
+      cancelLabel:'取消', okLabel:'立即登入',
+      onOk: ()=>{ requestGoogleLogin({skipAutoLoad:true}).then(saveAllToCloud).catch(()=>{}); }
+    });
+    return;
+  }
+  const btn = document.getElementById('btn-cloud-save');
+  _cloudBusy = true;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> 儲存中…';
+  try{
+    const ids = await ensureCloudFiles();
+    const data = serializeForCloud();
+
+    /* 文件庫：刪舊文件分頁＋建新分頁（_索引/_資料夾 常駐，保證恆有分頁在），再全量寫值 */
+    const meta = await sheetsApi.get(`/${ids.docs}`, {params:{fields:'sheets.properties'}});
+    const requests = [];
+    meta.data.sheets.map(s=>s.properties)
+      .filter(p=>p.title !== '_索引' && p.title !== '_資料夾')
+      .forEach(p=>requests.push({deleteSheet:{sheetId:p.sheetId}}));
+    data.docSheets.forEach(ds=>requests.push({addSheet:{properties:{title:ds.title}}}));
+    if(requests.length) await sheetsApi.post(`/${ids.docs}:batchUpdate`, {requests});
+    await sheetsApi.post(`/${ids.docs}/values:batchClear`, {ranges:['_索引', '_資料夾']});
+    await sheetsApi.post(`/${ids.docs}/values:batchUpdate`, {valueInputOption:'RAW', data:[
+      {range:'_索引!A1',   values:[INDEX_HEADER,  ...data.indexRows]},
+      {range:'_資料夾!A1', values:[FOLDER_HEADER, ...data.folderRows]},
+      ...data.docSheets.map(ds=>({range:`'${ds.title}'!A1`, values:[DOC_HEADER, ...ds.rows]}))
+    ]});
+
+    await sheetsApi.post(`/${ids.terms}/values:batchClear`, {ranges:['術語庫']});
+    await sheetsApi.post(`/${ids.terms}/values:batchUpdate`, {valueInputOption:'RAW',
+      data:[{range:'術語庫!A1', values:[TERM_HEADER, ...data.termRows]}]});
+    await sheetsApi.post(`/${ids.tm}/values:batchClear`, {ranges:['翻譯記憶']});
+    await sheetsApi.post(`/${ids.tm}/values:batchUpdate`, {valueInputOption:'RAW',
+      data:[{range:'翻譯記憶!A1', values:[TM_HEADER, ...data.tmRows]}]});
+
+    const t = new Date();
+    const hhmm = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+    showToast(`已儲存至雲端（${documents.length} 份文件、${termBase.length} 條術語、${tmSegments.length} 句記憶｜${hhmm}）`);
+  }catch(err){
+    showToast('儲存失敗：' + (err.response?.data?.error?.message || err.message));
+  }finally{
+    _cloudBusy = false;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> 儲存至雲端';
+  }
+}
+document.getElementById('btn-cloud-save').addEventListener('click', ()=>{ saveAllToCloud(); });
+
+/* 讀取：batchGet 需重複 ranges 參數，手組 query string（axios 陣列序列化格式 Google 不收） */
+async function fetchRanges(spreadsheetId, ranges){
+  const qs = ranges.map(r=>'ranges=' + encodeURIComponent(r)).join('&');
+  const r = await sheetsApi.get(`/${spreadsheetId}/values:batchGet?${qs}`);
+  return r.data.valueRanges.map(v=>v.values || []);
+}
+const _cell = (row, i)=> row[i] === undefined || row[i] === null ? '' : String(row[i]);
+
+async function fetchAllFromCloud(){
+  const ids = loadSheetIds();
+  const next = { documents:[], termBase:[], tmSegments:[], folders:[] };
+  if(ids.docs){
+    const [idxRows, folderRows] = await fetchRanges(ids.docs, ['_索引', '_資料夾']);
+    next.folders = folderRows.slice(1).filter(r=>_cell(r,0)).map(r=>({id:_cell(r,0), name:_cell(r,1)}));
+    const docMetas = idxRows.slice(1).filter(r=>_cell(r,0)).map(r=>({
+      id:_cell(r,0), name:_cell(r,1), folderId:_cell(r,2) || null,
+      srcLang:_cell(r,3), tgtLang:_cell(r,4),
+      createdAt:Number(_cell(r,5)) || Date.now(), updatedAt:Number(_cell(r,6)) || Date.now(),
+      sheetTitle:_cell(r,7)
+    }));
+    if(docMetas.length){
+      const segRangeRows = await fetchRanges(ids.docs, docMetas.map(m=>`'${m.sheetTitle}'!A2:F`));
+      next.documents = docMetas.map((m, i)=>({
+        id:m.id, name:m.name, folderId:m.folderId, srcLang:m.srcLang, tgtLang:m.tgtLang,
+        createdAt:m.createdAt, updatedAt:m.updatedAt,
+        segments: segRangeRows[i].filter(r=>_cell(r,0)).map(r=>({
+          id:_cell(r,0),
+          srcNo:_cell(r,1) === '' ? null : (isNaN(Number(_cell(r,1))) ? _cell(r,1) : Number(_cell(r,1))),
+          ja:_cell(r,2), zh:_cell(r,3),
+          confirmed:_cell(r,4) === 'TRUE',
+          tmId:_cell(r,5) || null
+        }))
+      }));
+    }
+  }
+  if(ids.terms){
+    const [rows] = await fetchRanges(ids.terms, ['術語庫!A2:G']);
+    next.termBase = rows.filter(r=>_cell(r,0)).map(r=>({
+      id:_cell(r,0), ja:_cell(r,1), zh:_cell(r,2), note:_cell(r,3), source:_cell(r,4),
+      srcLang:_cell(r,5), tgtLang:_cell(r,6)
+    }));
+  }
+  if(ids.tm){
+    const [rows] = await fetchRanges(ids.tm, ['翻譯記憶!A2:F']);
+    next.tmSegments = rows.filter(r=>_cell(r,0)).map(r=>({
+      id:_cell(r,0), ja:_cell(r,1), zh:_cell(r,2), source:_cell(r,3),
+      srcLang:_cell(r,4), tgtLang:_cell(r,5)
+    }));
+  }
+  return next;
+}
+
+/* 覆蓋全域資料後重繪所有 view（幽靈畫面守則：漏繪即殘影） */
+function applyCloudData(next){
+  documents = next.documents;
+  termBase = next.termBase;
+  tmSegments = next.tmSegments;
+  folders = next.folders;
+  currentDocId = null;
+  lastFocusedSegId = null;
+  termPage = 1; tmPage = 1;
+  collapsedFolders = new Set();
+  renderSegments();
+  renderProjects();
+  renderTermTable();
+  renderTMTable();
+  renderPVSidebar();
+  renderTMSidebar();
+  updateStats();
+  activateTab('projects');   // 載入完成直接帶到專案區看見文件清單
+}
+
+async function tryAutoLoadFromCloud(){
+  const ids = loadSheetIds();
+  if(!ids.docs && !ids.terms && !ids.tm) return;
+  const doLoad = async ()=>{
+    try{
+      const next = await fetchAllFromCloud();
+      applyCloudData(next);
+      showToast(`已從雲端載入 ${next.documents.length} 份文件、${next.termBase.length} 條術語、${next.tmSegments.length} 句記憶`);
+    }catch(err){
+      showToast('雲端載入失敗：' + (err.response?.status === 404
+        ? '找不到試算表（可能已被刪除，可到帳號視窗重新連結）'
+        : (err.response?.data?.error?.message || err.message)));
+    }
+  };
+  const hasLocal = documents.length || termBase.length || tmSegments.length || folders.length;
+  if(hasLocal){
+    openConfirmModal({
+      title:'載入雲端資料',
+      text:'偵測到本機已有資料。<br>載入雲端會覆蓋目前畫面上的所有內容，要繼續嗎？',
+      cancelLabel:'保留本機資料', okLabel:'載入雲端（覆蓋本機）',
+      onOk: doLoad
+    });
+  }else{
+    await doLoad();
+  }
+}
+
+/* 帳號 Modal：email、三表連結狀態、貼網址重連（標記分頁自動辨識）、登出 */
+async function relinkSpreadsheet(url){
+  const m = /spreadsheets\/d\/([A-Za-z0-9_-]+)/.exec(url);
+  if(!m){ showToast('無法從網址解析試算表 ID'); return false; }
+  try{
+    const meta = await sheetsApi.get(`/${m[1]}`, {params:{fields:'sheets.properties'}});
+    const titles = meta.data.sheets.map(s=>s.properties.title);
+    const ids = loadSheetIds();
+    let kind = null;
+    if(titles.includes('_索引'))          { ids.docs = m[1];  kind = '文件庫'; }
+    else if(titles.includes('術語庫'))    { ids.terms = m[1]; kind = '術語庫'; }
+    else if(titles.includes('翻譯記憶'))  { ids.tm = m[1];    kind = '翻譯記憶'; }
+    if(!kind){ showToast('辨識失敗：這份試算表沒有校譯台的標記分頁'); return false; }
+    saveSheetIds(ids);
+    showToast(`已重新連結「${kind}」`);
+    return true;
+  }catch(err){
+    showToast('連結失敗：' + (err.response?.data?.error?.message || err.message));
+    return false;
+  }
+}
+function openAccountModal(){
+  const ids = loadSheetIds();
+  const linkRow = (label, id)=> id
+    ? `<div class="cloud-link-row"><span>${label}</span><a href="https://docs.google.com/spreadsheets/d/${id}" target="_blank" rel="noopener">開啟試算表 <i class="bi bi-box-arrow-up-right"></i></a></div>`
+    : `<div class="cloud-link-row"><span>${label}</span><span class="cloud-none">尚未建立（首次儲存時自動建立）</span></div>`;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-wide">
+      <h3>Google 帳號</h3>
+      <p class="account-email"><i class="bi bi-person-check"></i> ${escapeHtml(googleAuth.email || '已連結 Google')}</p>
+      <div class="cloud-links">
+        ${linkRow('文件庫', ids.docs)}
+        ${linkRow('術語庫', ids.terms)}
+        ${linkRow('翻譯記憶', ids.tm)}
+      </div>
+      <div class="modal-field">
+        <label>重新連結試算表（貼上網址自動辨識是哪份表，成功後會接著詢問是否載入）</label>
+        <input type="text" id="relink-input" placeholder="https://docs.google.com/spreadsheets/d/…">
+      </div>
+      <div class="modal-actions">
+        <button class="btn outline" data-role="relink">重新連結</button>
+        <button class="btn outline" data-role="logout">登出</button>
+        <button class="btn vermilion" data-role="close">關閉</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target === overlay) overlay.remove(); });
+  overlay.querySelector('[data-role="close"]').addEventListener('click', ()=>overlay.remove());
+  overlay.querySelector('[data-role="logout"]').addEventListener('click', ()=>{ overlay.remove(); openLogoutConfirm(); });
+  overlay.querySelector('[data-role="relink"]').addEventListener('click', async ()=>{
+    const url = document.getElementById('relink-input').value.trim();
+    if(!url){ showToast('請先貼上試算表網址'); return; }
+    if(await relinkSpreadsheet(url)){ overlay.remove(); tryAutoLoadFromCloud(); }   // 重連成功→接載入流程（防覆蓋確認）
   });
 }
 
