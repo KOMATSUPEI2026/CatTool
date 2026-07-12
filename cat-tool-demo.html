@@ -492,7 +492,7 @@ async function ensureCloudFiles(){
 
 let _cloudBusy = false;
 async function saveAllToCloud(opts = {}){
-  if(_cloudBusy) return;
+  if(_cloudBusy){ if(!opts.auto) showToast('儲存進行中，請稍候…'); return; }
   if(!googleAuth.token){
     openConfirmModal({
       title:'尚未連結 Google',
@@ -731,6 +731,24 @@ function autoSaveTick(){
   saveAllToCloud({auto:true});
 }
 setInterval(autoSaveTick, AUTO_SAVE_MS);
+
+/* 閒置自動存（debounce）：改動後停手 3 分鐘即上傳——翻譯節奏中不打 API（每存一次
+   約 8~10 個請求，寫入配額 60 請求/分，逐句即存會撞限）；20 分鐘定時為保底 */
+const IDLE_SAVE_MS = 3 * 60 * 1000;
+const IDLE_POLL_MS = 30 * 1000;
+let _lastSeenSnapshot = _lastCloudSnapshot;
+let _lastChangeAt = 0;
+function idleSaveCheck(){
+  const snap = cloudSnapshot();
+  if(snap !== _lastSeenSnapshot){          // 還在改動：重新起算閒置時間
+    _lastSeenSnapshot = snap;
+    _lastChangeAt = Date.now();
+    return;
+  }
+  if(!hasUnsavedChanges()) return;
+  if(_lastChangeAt && Date.now() - _lastChangeAt >= IDLE_SAVE_MS) autoSaveTick();   // 共用訪客/過期守門
+}
+setInterval(idleSaveCheck, IDLE_POLL_MS);
 
 window.addEventListener('beforeunload', (e)=>{
   if(!hasUnsavedChanges()) return;
