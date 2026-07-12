@@ -10,6 +10,18 @@
 </head>
 <body>
 
+<!-- ===== 歡迎面板（進站授權入口，登入或選訪客後移除） ===== -->
+<div class="welcome-overlay" id="welcome-overlay">
+  <div class="welcome-card">
+    <span class="seal-mark">校</span>
+    <h2>校譯台</h2>
+    <p class="welcome-tagline">術語比對・翻譯記憶　試作版 Demo</p>
+    <button class="btn vermilion large welcome-btn" id="welcome-google"><i class="bi bi-google"></i> 使用 Google 登入</button>
+    <button class="btn outline large welcome-btn" id="welcome-guest"><i class="bi bi-person"></i> 以訪客身分使用</button>
+    <p class="welcome-hint">登入後可將文件、術語庫與翻譯記憶儲存至 Google 試算表；<br>訪客模式資料僅存於瀏覽器記憶體，重新整理即清空。</p>
+  </div>
+</div>
+
 <div class="wrap">
   <header>
     <div class="brand">
@@ -25,6 +37,7 @@
         <span>記憶句段　<b id="stat-tm">0</b></span>
         <span>文件數　<b id="stat-docs">0</b></span>
       </div>
+      <button class="icon-btn" id="btn-account" title="點擊連結 Google 帳號"><i class="bi bi-person"></i> 訪客模式</button>
       <button class="icon-btn" id="btn-shortcuts"><i class="bi bi-keyboard"></i> 快捷鍵說明</button>
       <button class="icon-btn" id="btn-dark-mode"><i class="bi bi-moon"></i> 暗黑模式</button>
       <button class="icon-btn" id="btn-text-scale"><i class="bi bi-zoom-in"></i> 防老花模式：1x</button>
@@ -264,6 +277,8 @@
 </aside>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js"></script>
 <script>
 /* ---------------- 狀態（全部存在記憶體中，重新整理頁面即清空） ---------------- */
 let termBase = [];   // {id, ja, zh, note, source, srcLang, tgtLang}
@@ -296,6 +311,107 @@ const VIEW_MODES = [
 ];
 let viewModeIdx = 0;
 let darkMode = false;
+
+/* ---------------- Google 授權：歡迎面板入口＋GIS popup token 流程 ----------------
+   access token 約 1 小時失效；Sheets 讀寫（下一輪）一律走 sheetsApi，401 自動重授權後重試 */
+const GOOGLE_CLIENT_ID = '686110770281-h5n162o95vvbf5hcuihb7n89ef46cuok.apps.googleusercontent.com';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email';
+let googleAuth = { token:null, email:null, expiresAt:0 };
+let _tokenClient = null;
+let _authWaiters = [];
+
+function _settleAuthWaiters(ok){
+  _authWaiters.forEach(w=> ok ? w.resolve() : w.reject(new Error('auth-failed')));
+  _authWaiters = [];
+}
+function initTokenClient(){
+  if(_tokenClient || !window.google?.accounts?.oauth2) return;
+  _tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPES,
+    callback: async (resp)=>{
+      if(resp.error){
+        showToast('Google 授權失敗：' + resp.error);
+        _settleAuthWaiters(false);
+        return;
+      }
+      googleAuth.token = resp.access_token;
+      googleAuth.expiresAt = Date.now() + Math.max(0, resp.expires_in - 60) * 1000;
+      await fetchGoogleEmail();
+      renderAccountStatus();
+      hideWelcomePanel();
+      showToast(googleAuth.email ? '已登入：' + googleAuth.email : 'Google 帳號已連結');
+      _settleAuthWaiters(true);
+    },
+    error_callback: (err)=>{
+      showToast('無法完成 Google 授權：' + (err.type || err.message || '未知錯誤'));
+      _settleAuthWaiters(false);
+    }
+  });
+}
+function requestGoogleLogin(){
+  initTokenClient();
+  if(!_tokenClient){
+    showToast('Google 登入元件尚未載入，請確認網路後再試');
+    return Promise.reject(new Error('gis-not-loaded'));
+  }
+  const p = new Promise((resolve, reject)=>_authWaiters.push({resolve, reject}));
+  _tokenClient.requestAccessToken();
+  return p;
+}
+async function fetchGoogleEmail(){
+  try{
+    const r = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo',
+      { headers:{ Authorization:'Bearer ' + googleAuth.token } });
+    googleAuth.email = r.data.email || null;
+  }catch(_){ googleAuth.email = null; }   // 拿不到 email 不影響授權本身
+}
+function logoutGoogle(){
+  if(googleAuth.token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(googleAuth.token);
+  googleAuth = { token:null, email:null, expiresAt:0 };
+  renderAccountStatus();
+  showToast('已登出 Google，改以訪客身分使用');
+}
+function renderAccountStatus(){
+  const btn = document.getElementById('btn-account');
+  btn.innerHTML = googleAuth.token
+    ? '<i class="bi bi-person-check"></i> ' + escapeHtml(googleAuth.email || '已連結 Google')
+    : '<i class="bi bi-person"></i> 訪客模式';
+  btn.title = googleAuth.token ? '點擊登出 Google 帳號' : '點擊連結 Google 帳號';
+}
+document.getElementById('btn-account').addEventListener('click', ()=>{
+  if(!googleAuth.token){ requestGoogleLogin().catch(()=>{}); return; }
+  openConfirmModal({
+    title:'登出 Google',
+    text:'登出後回到訪客模式，畫面上的資料保留不動，<br>但僅存在瀏覽器記憶體，請記得匯出 JSON 備份。',
+    cancelLabel:'取消', okLabel:'確定登出',
+    onOk: logoutGoogle
+  });
+});
+
+/* 歡迎面板：登入成功或選訪客後移除 */
+function hideWelcomePanel(){
+  document.getElementById('welcome-overlay')?.remove();
+}
+document.getElementById('welcome-guest').addEventListener('click', hideWelcomePanel);
+document.getElementById('welcome-google').addEventListener('click', ()=>requestGoogleLogin().catch(()=>{}));
+
+/* ---------------- axios 骨架：Sheets 請求統一出口 ---------------- */
+const sheetsApi = window.axios ? axios.create({ baseURL:'https://sheets.googleapis.com/v4/spreadsheets' }) : null;
+if(sheetsApi){
+  sheetsApi.interceptors.request.use((cfg)=>{
+    cfg.headers.Authorization = 'Bearer ' + googleAuth.token;
+    return cfg;
+  });
+  sheetsApi.interceptors.response.use(null, async (err)=>{
+    if(err.response?.status === 401 && !err.config._retried){
+      err.config._retried = true;
+      await requestGoogleLogin();   // token 過期：重新彈授權視窗，完成後重試原請求
+      return sheetsApi(err.config);
+    }
+    return Promise.reject(err);
+  });
+}
 
 /* ---------------- 分頁（術語庫/翻譯記憶，每頁 10 筆） ---------------- */
 const PAGE_SIZE = 10;

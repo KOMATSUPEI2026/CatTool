@@ -524,6 +524,28 @@ ul, ol { list-style: none; padding: 0; }
   .modal-actions.modal-actions-center{justify-content:center;gap:14px;}
   .btn.large{padding:14px 28px;font-size:14px;border-radius:6px;}
 
+  /* 歡迎面板（進站授權入口） */
+  .welcome-overlay{
+    position:fixed;inset:0;z-index:95;background:var(--paper);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .welcome-card{
+    background:var(--paper-card);border:1px solid var(--line);border-radius:8px;
+    padding:48px 56px;box-shadow:0 12px 32px rgba(0,0,0,.15);
+    display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+  }
+  .welcome-card .seal-mark{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:48px;height:48px;border-radius:6px;
+    background:var(--vermilion);color:#F6E9E5;
+    font-family:"Noto Serif TC",serif;font-weight:700;font-size:24px;
+    transform:rotate(-3deg);
+  }
+  .welcome-card h2{font-family:"Noto Serif TC",serif;font-weight:700;font-size:24px;margin:0;color:var(--ink);letter-spacing:.02em;}
+  .welcome-tagline{font-size:12px;color:var(--ink-soft);letter-spacing:.04em;margin:0 0 10px;}
+  .btn.welcome-btn{width:240px;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
+  .welcome-hint{font-size:12px;color:var(--ink-soft);line-height:1.8;margin:10px 0 0;}
+
   /* 快捷鍵說明 Modal */
   .shortcut-list{display:flex;flex-direction:column;gap:10px;margin:14px 0 4px;}
   .shortcut-row{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--ink);line-height:1.6;}
