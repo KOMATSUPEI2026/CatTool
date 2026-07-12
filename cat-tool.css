@@ -85,7 +85,8 @@ ul, ol { list-style: none; padding: 0; }
   }
   h1{font-family:"Noto Serif TC",serif;font-weight:700;font-size:24px;margin:0;letter-spacing:.02em;}
   .tagline{font-size:12px;color:var(--ink-soft);letter-spacing:.04em;}
-  .header-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .header-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap;width:100%;justify-content:space-between;}
+  .header-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
   .stat-line{font-size:12px;color:var(--ink-soft);display:flex;gap:18px;}
   .stat-line b{color:var(--ink);font-weight:600;}
   .icon-btn{
@@ -592,6 +593,7 @@ ul, ol { list-style: none; padding: 0; }
   .modal-field input:focus{outline:none;border-color:var(--vermilion);}
   .modal-field.ja input{font-family:"Noto Serif JP","Noto Serif TC",serif;}
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .modal-actions .btn{white-space:nowrap;}
 
   /* 句段整理 Modal（編輯/分割、排列、合併、刪除共用） */
   .modal-card.modal-card-xl{width:720px;}

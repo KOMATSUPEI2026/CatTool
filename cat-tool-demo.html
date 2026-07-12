@@ -37,11 +37,13 @@
         <span>記憶句段　<b id="stat-tm">0</b></span>
         <span>文件數　<b id="stat-docs">0</b></span>
       </div>
-      <button class="icon-btn" id="btn-cloud-save" title="將文件、術語庫與翻譯記憶儲存至 Google 試算表"><i class="bi bi-cloud-arrow-up"></i> 儲存至雲端</button>
-      <button class="icon-btn" id="btn-account" title="點擊連結 Google 帳號"><i class="bi bi-person"></i> 訪客模式</button>
-      <button class="icon-btn" id="btn-shortcuts"><i class="bi bi-keyboard"></i> 快捷鍵說明</button>
-      <button class="icon-btn" id="btn-dark-mode"><i class="bi bi-moon"></i> 暗黑模式</button>
-      <button class="icon-btn" id="btn-text-scale"><i class="bi bi-zoom-in"></i> 防老花模式：1x</button>
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-account" title="點擊連結 Google 帳號"><i class="bi bi-person"></i> 訪客模式</button>
+        <button class="icon-btn" id="btn-shortcuts"><i class="bi bi-keyboard"></i> 快捷鍵說明</button>
+        <button class="icon-btn" id="btn-dark-mode"><i class="bi bi-moon"></i> 暗黑模式</button>
+        <button class="icon-btn" id="btn-text-scale"><i class="bi bi-zoom-in"></i> 防老花模式：1x</button>
+        <button class="icon-btn" id="btn-cloud-save" title="將文件、術語庫與翻譯記憶儲存至 Google 試算表"><i class="bi bi-cloud-arrow-up"></i> 儲存至雲端</button>
+      </div>
     </div>
   </header>
 
@@ -389,7 +391,8 @@ function openLogoutConfirm(){
     title:'登出 Google',
     text:'登出後回到訪客模式，畫面上的資料保留不動，<br>但僅存在瀏覽器記憶體，請記得先儲存至雲端或匯出 JSON。',
     cancelLabel:'取消', okLabel:'確定登出',
-    onOk: logoutGoogle
+    onOk: logoutGoogle,
+    wide: true
   });
 }
 document.getElementById('btn-account').addEventListener('click', ()=>{
@@ -488,7 +491,7 @@ async function ensureCloudFiles(){
 }
 
 let _cloudBusy = false;
-async function saveAllToCloud(){
+async function saveAllToCloud(opts = {}){
   if(_cloudBusy) return;
   if(!googleAuth.token){
     openConfirmModal({
@@ -504,6 +507,7 @@ async function saveAllToCloud(){
   btn.disabled = true;
   btn.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> 儲存中…';
   try{
+    const snapAtStart = cloudSnapshot();   // 儲存期間若又打字，快照對不上=仍視為未儲存
     const ids = await ensureCloudFiles();
     const data = serializeForCloud();
 
@@ -513,7 +517,11 @@ async function saveAllToCloud(){
     meta.data.sheets.map(s=>s.properties)
       .filter(p=>p.title !== '_索引' && p.title !== '_資料夾')
       .forEach(p=>requests.push({deleteSheet:{sheetId:p.sheetId}}));
-    data.docSheets.forEach(ds=>requests.push({addSheet:{properties:{title:ds.title}}}));
+    // 分頁指定實際大小（預設 1000×26 格會虛耗配額：每份試算表上限一千萬格）
+    data.docSheets.forEach(ds=>requests.push({addSheet:{properties:{
+      title:ds.title,
+      gridProperties:{rowCount: ds.rows.length + 1, columnCount: DOC_HEADER.length}
+    }}}));
     if(requests.length) await sheetsApi.post(`/${ids.docs}:batchUpdate`, {requests});
     await sheetsApi.post(`/${ids.docs}/values:batchClear`, {ranges:['_索引', '_資料夾']});
     await sheetsApi.post(`/${ids.docs}/values:batchUpdate`, {valueInputOption:'RAW', data:[
@@ -529,9 +537,11 @@ async function saveAllToCloud(){
     await sheetsApi.post(`/${ids.tm}/values:batchUpdate`, {valueInputOption:'RAW',
       data:[{range:'翻譯記憶!A1', values:[TM_HEADER, ...data.tmRows]}]});
 
+    _lastCloudSnapshot = snapAtStart;
+    _expiredNoticeShown = false;
     const t = new Date();
     const hhmm = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
-    showToast(`已儲存至雲端（${documents.length} 份文件、${termBase.length} 條術語、${tmSegments.length} 句記憶｜${hhmm}）`);
+    showToast(`${opts.auto ? '已自動儲存至雲端' : '已儲存至雲端'}（${documents.length} 份文件、${termBase.length} 條術語、${tmSegments.length} 句記憶｜${hhmm}）`);
   }catch(err){
     showToast('儲存失敗：' + (err.response?.data?.error?.message || err.message));
   }finally{
@@ -612,6 +622,7 @@ function applyCloudData(next){
   renderTMSidebar();
   updateStats();
   activateTab('projects');   // 載入完成直接帶到專案區看見文件清單
+  _lastCloudSnapshot = cloudSnapshot();   // 剛載入＝與雲端同步
 }
 
 async function tryAutoLoadFromCloud(){
@@ -634,7 +645,8 @@ async function tryAutoLoadFromCloud(){
       title:'載入雲端資料',
       text:'偵測到本機已有資料。<br>載入雲端會覆蓋目前畫面上的所有內容，要繼續嗎？',
       cancelLabel:'保留本機資料', okLabel:'載入雲端（覆蓋本機）',
-      onOk: doLoad
+      onOk: doLoad,
+      wide: true
     });
   }else{
     await doLoad();
@@ -697,6 +709,38 @@ function openAccountModal(){
     if(!url){ showToast('請先貼上試算表網址'); return; }
     if(await relinkSpreadsheet(url)){ overlay.remove(); tryAutoLoadFromCloud(); }   // 重連成功→接載入流程（防覆蓋確認）
   });
+}
+
+/* ---------------- 雲端自動儲存與關頁守門：以資料快照比對偵測未儲存變更 ---------------- */
+const AUTO_SAVE_MS = 20 * 60 * 1000;   // 20 分鐘
+function cloudSnapshot(){ return JSON.stringify({documents, termBase, tmSegments, folders}); }
+let _lastCloudSnapshot = cloudSnapshot();   // 初始＝空狀態
+let _expiredNoticeShown = false;
+function hasUnsavedChanges(){ return cloudSnapshot() !== _lastCloudSnapshot; }
+
+function autoSaveTick(){
+  if(!hasUnsavedChanges()) return;
+  if(!googleAuth.token) return;                 // 訪客不打擾
+  if(Date.now() >= googleAuth.expiresAt){       // 過期不能無手勢彈授權視窗（會被瀏覽器攔）
+    if(!_expiredNoticeShown){
+      showToast('自動儲存暫停：Google 授權已過期，請手動按「儲存至雲端」重新授權');
+      _expiredNoticeShown = true;
+    }
+    return;
+  }
+  saveAllToCloud({auto:true});
+}
+setInterval(autoSaveTick, AUTO_SAVE_MS);
+
+window.addEventListener('beforeunload', (e)=>{
+  if(!hasUnsavedChanges()) return;
+  e.preventDefault();
+  e.returnValue = '';   // 需設值 Chrome 才顯示原生「確定離開？」
+});
+
+/* 句段整理五功能送出後即時存雲端（已登入才觸發；訪客沿用手動儲存流程） */
+function autoSaveAfterSegTool(){
+  if(googleAuth.token) saveAllToCloud({auto:true});
 }
 
 /* ---------------- 分頁（術語庫/翻譯記憶，每頁 10 筆） ---------------- */
@@ -1927,6 +1971,7 @@ document.getElementById('btn-seg-edit').addEventListener('click', ()=>{
     overlay.remove();
     renderSegments();
     renderProjects();
+    autoSaveAfterSegTool();
   });
 });
 
@@ -1974,6 +2019,7 @@ document.getElementById('btn-seg-reorder').addEventListener('click', ()=>{
     overlay.remove();
     renderSegments();
     renderProjects();
+    autoSaveAfterSegTool();
   });
 });
 
@@ -2008,6 +2054,7 @@ document.getElementById('btn-seg-merge').addEventListener('click', ()=>{
     overlay.remove();
     renderSegments();
     renderProjects();
+    autoSaveAfterSegTool();
   });
 });
 
@@ -2054,6 +2101,7 @@ document.getElementById('btn-seg-add').addEventListener('click', ()=>{
     overlay.remove();
     renderSegments();
     renderProjects();
+    autoSaveAfterSegTool();
   });
 });
 
@@ -2081,6 +2129,7 @@ document.getElementById('btn-seg-delete').addEventListener('click', ()=>{
     overlay.remove();
     renderSegments();
     renderProjects();
+    autoSaveAfterSegTool();
   });
 });
 
@@ -2602,11 +2651,11 @@ function showToast(msg){
 }
 
 /* 通用：置中確認 Modal（取代原生 confirm；比照「重置確認狀態」樣式） */
-function openConfirmModal({title, text, cancelLabel='取消', okLabel='確定', onOk}){
+function openConfirmModal({title, text, cancelLabel='取消', okLabel='確定', onOk, wide=false}){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-card modal-card-center">
+    <div class="modal-card modal-card-center${wide ? ' modal-card-wide' : ''}">
       <h3>${escapeHtml(title)}</h3>
       <p class="modal-confirm-text">${text}</p>
       <div class="modal-actions modal-actions-center">
