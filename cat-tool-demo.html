@@ -25,6 +25,7 @@
         <span>記憶句段　<b id="stat-tm">0</b></span>
         <span>文件數　<b id="stat-docs">0</b></span>
       </div>
+      <button class="icon-btn" id="btn-shortcuts"><i class="bi bi-keyboard"></i> 快捷鍵說明</button>
       <button class="icon-btn" id="btn-dark-mode"><i class="bi bi-moon"></i> 暗黑模式</button>
       <button class="icon-btn" id="btn-text-scale"><i class="bi bi-zoom-in"></i> 防老花模式：1x</button>
     </div>
@@ -2219,6 +2220,38 @@ function openConfirmModal({title, text, cancelLabel='取消', okLabel='確定', 
     onOk();
   });
 }
+
+/* ---------------- 快捷鍵說明 Modal ---------------- */
+function openShortcutsModal(){
+  const rows = [
+    {scene:'翻譯工作區・譯文欄', keys:['Tab'],                                desc:'確認句段並存入翻譯記憶'},
+    {scene:'術語卡片顯示時',     keys:['Mac Ctrl+1~9','Win Alt+1~9'],         desc:'帶入對應編號的譯名'},
+    {scene:'快捷標點列',         keys:['Mac Ctrl+Shift+1~0','Win Alt+Shift+1~0'], desc:'插入第 1~10 格符號'},
+    {scene:'記憶側欄卡片',       keys:['Tab'],                                desc:'更新該筆翻譯記憶'},
+    {scene:'記憶側欄卡片',       keys:['Enter'],                              desc:'套用譯文至目前句段'},
+    {scene:'編輯/分割視窗',      keys:['Enter'],                              desc:'於游標處分割句子'},
+  ];
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-card modal-card-wide">
+      <h3>快捷鍵說明</h3>
+      <div class="shortcut-list">
+        ${rows.map(r=>`
+          <div class="shortcut-row">
+            <span class="shortcut-scene">${r.scene}</span>
+            <span>${r.keys.map(k=>`<span class="kbd">${k}</span>`).join('／')}　${r.desc}</span>
+          </div>`).join('')}
+      </div>
+      <div class="modal-actions modal-actions-center">
+        <button class="btn outline large" data-role="close">關閉</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('[data-role="close"]').addEventListener('click', ()=>overlay.remove());
+}
+document.getElementById('btn-shortcuts').addEventListener('click', openShortcutsModal);
 
 /* 通用：匯出 / 匯入 JSON（純前端，不使用 localStorage） */
 function downloadJSON(data, filename){
