@@ -30,7 +30,7 @@
 | V35 | 「特定頁檢視」→「跨頁檢視」，搜尋跨度：檔名/語系代碼/原文譯文內容三路比對 |
 | V36 | **句段整理五功能**（仿 Termsoup Modal 式）：編輯/分割、拖曳排序、相鄰合併（譯文串接）、新增、多選刪除；情境列 5 icon 鈕 |
 | V37 | **快捷標點符號列**（仿 Termsoup）：固定視窗下緣、10 格可自訂、Ctrl/Alt+Shift+1~0；配對括號停中間/包反白；**V28 補齊**——insertIntoSeg 一律退回未確認（術語帶入自此也適用） |
-| V38 | **CSS 抽離**成獨立 `cat-tool.css`（React 重構鋪路）＋**現代精簡 reset**（裁剪自 Comeau/Bell，7 條；明確不採 Meyer 原版與 line-height:1） |
+| V38 | **CSS 抽離**成獨立 `cat-tool.css`（React 重構鋪路）＋**現代精簡 reset**（裁剪自 Comeau/Bell，7 條；明確不採 Meyer 原版與 line-height:1）。後續五分頁健檢修 3 bug：刪除開啟中檔案的幽靈畫面（工作區即時重繪）、TM 側欄 Shift+Tab 誤改寫記憶、術語庫「+新增詞條」配對改為跟隨目前檔案（與反白新增一致） |
 
 ## 資料模型（核心）
 

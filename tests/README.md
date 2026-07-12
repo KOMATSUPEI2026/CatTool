@@ -19,6 +19,7 @@ npm install puppeteer-core
 cd tests
 node test-v36.js   # V36 句段整理五功能（16 項斷言）
 node test-v37.js   # V37 快捷標點符號列＋bug 修正回歸（25 項斷言）
+node test-v38.js   # V38 端到端譯者之旅：五分頁完整流程＋三項 bug 修正驗證（21 項斷言）
 ```
 
 全部通過會輸出「全部通過」並以 exit code 0 結束；任一失敗列出 ❌ 明細並以 exit code 1 結束。

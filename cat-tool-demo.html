@@ -911,7 +911,8 @@ document.getElementById('tm-sidebar-body').addEventListener('input', (e)=>{
 document.getElementById('tm-sidebar-body').addEventListener('keydown', (e)=>{
   if(e.target.tagName!=='TEXTAREA') return;
   const tmId = e.target.dataset.tmid;
-  if(e.key==='Tab'){
+  // Shift+Tab 是反向移動焦點，不觸發更新（與工作區句段的 Tab 確認同一原則）
+  if(e.key==='Tab' && !e.shiftKey){
     const t = tmSegments.find(t=>t.id===tmId);
     if(t && e.target.value.trim()){
       t.zh = e.target.value;
@@ -1982,7 +1983,12 @@ document.getElementById('project-tbody').addEventListener('click', (e)=>{
     const did = rdel.dataset.docid;
     if(!confirm('刪除這個檔案？所有句段內容將會遺失。')) return;
     documents = documents.filter(d=>d.id!==did);
-    if(currentDocId===did) currentDocId=null;
+    if(currentDocId===did){
+      // 刪的是目前開啟中的檔案：立即重繪工作區，避免殘留舊句段畫面（打字會靜默丟失）
+      currentDocId = null;
+      renderSegments();
+      renderTMSidebar();
+    }
     renderProjects();
     return;
   }
@@ -2010,7 +2016,9 @@ document.getElementById('btn-new-folder').addEventListener('click', ()=>{
 
 /* 術語庫 */
 document.getElementById('btn-add-term').addEventListener('click', ()=>{
-  const np = langPairReady() ? getLangPair() : {src:'ja', tgt:'zh-TW'};
+  // 配對優先跟隨目前開啟中的檔案（與反白新增一致），沒有開檔才退回入稿區選擇，再退回預設
+  const doc = getCurrentDoc();
+  const np = doc ? docPair(doc) : (langPairReady() ? getLangPair() : {src:'ja', tgt:'zh-TW'});
   termBase.unshift({id:cid(), ja:'', zh:'', note:'', source:'', srcLang:np.src, tgtLang:np.tgt});
   termPage = 1;   // 新詞條插在最前面，跳回第 1 頁讓使用者看得到
   renderTermTable();
