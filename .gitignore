@@ -1,0 +1,4 @@
+# 僅推送主程式檔案，以下內容留在本機
+CLAUDE.md
+docs/
+tests/
