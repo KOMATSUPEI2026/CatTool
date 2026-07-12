@@ -66,6 +66,7 @@ folders    = [{ id, name }]
 - **隱藏面板量測**：`display:none` 面板 `scrollHeight` 為 0，`autoGrow` 等量測必須在面板切回可見後補算（`activateTab` 已掛鉤點）
 - **IME 相容**：側欄搜尋框結構是「搜尋框常駐 + 只重繪結果區 + composition 事件」，改動搜尋相關功能不可破壞此結構
 - 動態改寫含 icon 的按鈕要用 `innerHTML`，用 `textContent` 會吃掉 icon
+- **幽靈畫面**：改動全域資料（documents/termBase/tmSegments/folders）後必須重繪所有受影響的 view，漏繪會讓使用者對殘影操作、輸入靜默丟失；測試斷言要同時驗資料層與 DOM（詳見 handoff 已知注意事項第 10 點與 tests/README）
 
 ### 設計規範（全站強制刻度）
 

@@ -1366,7 +1366,8 @@ function activateTab(key){
   document.getElementById('scroll-capsule')?.classList.toggle('show', key==='projects' || key==='work');
   document.getElementById('punct-bar')?.classList.toggle('show', key==='work');
   if(key==='projects') renderProjects();
-  if(key==='work'){ renderPVSidebar(); autoGrowAll('#seg-list textarea'); }
+  // 切回工作區時兩側欄都重繪：TM 資料可能在其他分頁被改動（匯入、刪除），避免側欄殘留幽靈畫面
+  if(key==='work'){ renderPVSidebar(); renderTMSidebar(); autoGrowAll('#seg-list textarea'); }
 }
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> activateTab(btn.dataset.tab));

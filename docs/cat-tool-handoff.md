@@ -115,6 +115,7 @@ folders    = [{ id, name }]
 7. TM 相似度為字元 bigram Jaccard，非商用 CAT 等級
 8. CDN 三依賴首次載入需網路；SheetJS 載入失敗時拖放區有明確提示（非無聲失敗）
 9. **class 命名撞名陷阱**：新元件的 class 必須避開全站既有類名——V37 標點列空格鍵曾取名 `empty`，撞上全域空狀態樣式 `.empty{padding:50px 20px}` 被灌大內距跑版（已改名 `blank`）。新增 class 前先 grep 確認未被占用
+10. **幽靈畫面陷阱（測試/抓 BUG 必查）**：畫面與記憶體資料脫鉤——資料已變但某個 view 沒重繪，使用者對著殘影操作、輸入靜默丟失。歷史案例：V38 刪除開啟中檔案後工作區殘留舊句段（打字全丟）；V39 後補：匯入 TM 後切回工作區側欄清單殘留舊卡片。**守則**：(a) 任何改動 documents/termBase/tmSegments/folders 的函式，必須逐一檢查九個 view（seg-list、專案表、術語表、TM 表、TM 側欄、PV 側欄、header 統計、進度條、標點列）哪些受影響並同步重繪；(b) `activateTab` 是最後防線——切入分頁時重繪該分頁依賴的 view（projects→renderProjects、work→renderPVSidebar+renderTMSidebar+autoGrow）；(c) 自動化測試的斷言要**同時驗資料層與 DOM**（例：刪除後 `doc.segments.length` 與 `#seg-list .seg` 數量必須相等），只驗資料層抓不到這類 BUG；(d) 發現幽靈畫面時不要只補一行 render——追出「哪個資料變動函式漏了哪個 view」，把同函式漏掉的其他 view 一併補齊
 
 ## 討論中/未實作事項
 

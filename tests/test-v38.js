@@ -180,6 +180,22 @@ async function state(){
   s = await state();
   assert('⑤b 刪TM→徽章退回、譯文保留', s.tm.length===0 && s.doc.segs[0].confirmed===false
          && s.doc.segs[0].tmId===null && s.doc.segs[0].zh===zhBeforeDel, JSON.stringify(s.doc.segs[0]));
+  // 幽靈畫面守則：資料層與 DOM 必須同步驗證（TM 表列數、header 統計都要跟上資料）
+  const tmDom = await page.evaluate(()=>({
+    rows: document.querySelectorAll('#tm-tbody tr').length,
+    stat: document.getElementById('stat-tm').textContent
+  }));
+  assert('⑤c 刪TM後 DOM 同步（無幽靈殘影）', tmDom.rows===0 && tmDom.stat==='0', JSON.stringify(tmDom));
+  // 在 TM 分頁改資料（模擬匯入）→ 切回工作區，側欄必須重繪出新紀錄（activateTab 最後防線）
+  await page.evaluate(()=>{
+    tmSegments.push({id:'ghost1', ja:'一句目です。', zh:'匯入的譯文', source:'匯入', srcLang:'ja', tgtLang:'zh-TW'});
+    renderTMTable();
+  });
+  await page.evaluate(()=>activateTab('work'));
+  await new Promise(r=>setTimeout(r,200));
+  const sideCards = await page.$$eval('#tm-sidebar-body .tm-card', els=>els.length);
+  assert('⑤d 匯入TM後切回工作區側欄即重繪（無幽靈殘影）', sideCards>=1, `cards=${sideCards}`);
+  await page.evaluate(()=>{ tmSegments = tmSegments.filter(t=>t.id!=='ghost1'); renderTMTable(); });
 
   /* ── ⑥ 幽靈畫面修正驗證：刪除目前開啟中的檔案（走置中確認 Modal） ── */
   await page.evaluate(()=>activateTab('projects'));
