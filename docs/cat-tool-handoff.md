@@ -109,7 +109,7 @@ folders    = [{ id, name }]
 3. **隱藏面板量測陷阱**：panel display:none 時 scrollHeight=0，autoGrow 等量測必須在面板可見後補算（activateTab 已掛）
 4. **IME 相容模式**：側欄搜尋框=「搜尋框常駐+只重繪結果區+composition 事件」，改動搜尋相關功能時不可破壞此結構
 5. 動態改寫含 icon 的按鈕要用 innerHTML，用 textContent 會吃掉 icon
-6. 重大修改後驗證：CSS 大括號配對、`node --check`（抽出 script 檢查）、設計規範刻度掃描（字級/偶數 spacing）
+6. 重大修改後驗證：CSS 大括號配對、`node --check`（抽出 script 檢查）、設計規範刻度掃描（字級/偶數 spacing）；另有 Puppeteer 自動化測試在 `tests/`（V36 起，見 tests/README.md，headless Chrome 實際模擬操作驗證）
 7. TM 相似度為字元 bigram Jaccard，非商用 CAT 等級
 8. CDN 三依賴首次載入需網路；SheetJS 載入失敗時拖放區有明確提示（非無聲失敗）
 9. **class 命名撞名陷阱**：新元件的 class 必須避開全站既有類名——V37 標點列空格鍵曾取名 `empty`，撞上全域空狀態樣式 `.empty{padding:50px 20px}` 被灌大內距跑版（已改名 `blank`）。新增 class 前先 grep 確認未被占用

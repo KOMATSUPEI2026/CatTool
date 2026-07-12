@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概要
 
-「校譯台」（cat-tool-demo）：自製網頁版 CAT（電腦輔助翻譯）工具，取代 Termsoup，主力工作流為日文→繁體中文書籍翻譯（現已支援 14 語系配對）。純 HTML + CSS + 原生 JavaScript 單一檔案（`cat-tool-demo.html`，約 2900 行），無建置系統、無套件管理、無測試框架。
+「校譯台」（cat-tool-demo）：自製網頁版 CAT（電腦輔助翻譯）工具，取代 Termsoup，主力工作流為日文→繁體中文書籍翻譯（現已支援 14 語系配對）。純 HTML + CSS + 原生 JavaScript 單一檔案（`cat-tool-demo.html`，約 2900 行），無建置系統、無套件管理；自動化測試獨立放在 `tests/`（Puppeteer，不影響主程式零依賴）。
 
 外部依賴僅來自 CDN（首次開啟需網路）：Google Fonts、SheetJS 0.18.5（xlsx 解析）、Bootstrap Icons 1.11.3。資料全部存在瀏覽器記憶體，重新整理即清空；各分頁支援 JSON 匯出/匯入備份。目前尚無任何後端或網路請求程式碼。
 
@@ -20,7 +20,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 開發與驗證
 
-沒有 build/lint/test 指令。開發方式是直接用瀏覽器開啟 `cat-tool-demo.html`。
+沒有 build/lint 指令。開發方式是直接用瀏覽器開啟 `cat-tool-demo.html`。
+
+自動化測試在 `tests/`（Puppeteer + headless Chrome，見 [tests/README.md](tests/README.md)）：首次 `cd tests && npm install puppeteer-core`，之後 `node tests/test-vXX.js` 執行；新功能比照現有腳本新增 `test-vXX.js`。
 
 重大修改後，依 handoff 文件「已知注意事項」第 6 點手動驗證：
 - CSS 大括號配對是否平衡
