@@ -10,7 +10,7 @@ import ConfirmModal from './components/ConfirmModal.jsx';
 import WelcomeOverlay from './components/WelcomeOverlay.jsx';
 import AccountModal from './components/AccountModal.jsx';
 import ScrollCapsule from './components/ScrollCapsule.jsx';
-import { requestGoogleLogin, saveAllToCloud } from './cloud.js';
+import { requestGoogleLogin, saveAllToCloud, reauthAndSave } from './cloud.js';
 import TmSidebar from './components/TmSidebar.jsx';
 import PvSidebar from './components/PvSidebar.jsx';
 import PunctBar from './components/PunctBar.jsx';
@@ -38,6 +38,7 @@ export default function App() {
   const cloudBusy    = useStore(s => s.cloudBusy);
   const confirmModal = useStore(s => s.confirmModal);
   const closeConfirm = useStore(s => s.closeConfirm);
+  const authExpiredPause = useStore(s => s.authExpiredPause);
 
   const [darkMode, setDarkMode] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -93,6 +94,14 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* 授權過期常駐橫幅：cloud.js 偵測「過期＋有未儲存變更」時開啟；重新授權成功後自動收起 */}
+      {authExpiredPause &&
+        <div className="auth-expired-bar" id="auth-expired-bar">
+          <i className="bi bi-exclamation-triangle"></i>
+          <span>Google 授權已過期，自動儲存暫停中——畫面上的資料仍在，請重新授權後繼續</span>
+          <button id="btn-reauth-save" onClick={() => { reauthAndSave(); }}>重新授權並儲存</button>
+        </div>}
 
       <nav className="tabs">
         {TABS.map(t => (

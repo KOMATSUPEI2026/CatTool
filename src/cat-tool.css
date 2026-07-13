@@ -96,6 +96,22 @@ ul, ol { list-style: none; padding: 0; }
   }
   .icon-btn:hover{border-color:var(--vermilion);}
 
+  /* 授權過期常駐橫幅（自動儲存暫停中；點按鈕＝使用者手勢，可直接彈 GIS 重新授權） */
+  .auth-expired-bar{
+    display:flex;align-items:center;gap:10px;
+    background:var(--vermilion-soft);border:1px solid var(--vermilion);border-radius:6px;
+    padding:8px 14px;margin-bottom:16px;
+    font-size:12px;color:var(--ink);
+  }
+  .auth-expired-bar .bi{color:var(--vermilion);font-size:14px;}
+  .auth-expired-bar button{
+    margin-left:auto;flex-shrink:0;
+    font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:600;
+    background:var(--vermilion);border:1px solid var(--vermilion);color:#F6E9E5;
+    padding:6px 12px;border-radius:20px;cursor:pointer;transition:opacity .15s;
+  }
+  .auth-expired-bar button:hover{opacity:.85;}
+
   /* tabs */
   nav.tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;}
   nav.tabs button{

@@ -35,6 +35,10 @@ function initTokenClient(){
         token: resp.access_token,
         expiresAt: Date.now() + Math.max(0, resp.expires_in - 60) * 1000
       });
+      // 拿到新 token＝授權週期重新起算：收掉過期橫幅、重置搶存/過期提示的一次性旗標
+      st().setAuthExpiredPause(false);
+      _preExpirySaved = false;
+      _expiredNoticeShown = false;
       await fetchGoogleEmail();
       st().hideWelcome();
       const email = st().auth.email;
@@ -71,6 +75,7 @@ export function logoutGoogle(){
   const token = st().auth.token;
   if(token && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token);
   st().setAuth({ token: null, email: null, expiresAt: 0 });
+  st().setAuthExpiredPause(false);   // 回訪客模式：過期橫幅失去意義，一併收掉
   toast('已登出 Google，改以訪客身分使用');
 }
 export function openLogoutConfirm(){
@@ -356,13 +361,35 @@ export function autoSaveTick(){
   if(!hasUnsavedChanges()) return;
   if(!st().auth.token) return;                  // 訪客不打擾
   if(Date.now() >= st().auth.expiresAt){        // 過期不能無手勢彈授權視窗（會被瀏覽器攔）
+    st().setAuthExpiredPause(true);             // 開常駐橫幅：一次性吐司易錯過，停擺狀態需持續可見
     if(!_expiredNoticeShown){
-      toast('自動儲存暫停：Google 授權已過期，請手動按「儲存至雲端」重新授權');
+      toast('自動儲存暫停：Google 授權已過期，請由上方橫幅重新授權');
       _expiredNoticeShown = true;
     }
     return;
   }
   saveAllToCloud({auto:true});
+}
+
+/* 過期前搶存（每個 token 週期只搶一次）：token 剩不到 5 分鐘且有未儲存變更時，
+   不等閒置條件立刻上傳——把「過期後自動儲存停擺」的資料風險窗口壓到過期前一刻 */
+const NEAR_EXPIRY_MS = 5 * 60 * 1000;
+let _preExpirySaved = false;
+export function preExpirySaveCheck(){
+  if(_preExpirySaved) return;
+  if(!st().auth.token || !hasUnsavedChanges()) return;
+  const left = st().auth.expiresAt - Date.now();
+  if(left <= 0 || left > NEAR_EXPIRY_MS) return;
+  _preExpirySaved = true;   // 失敗不重試：之後仍有閒置/定時儲存接手，過期後由橫幅收尾
+  saveAllToCloud({auto:true});
+}
+
+/* 過期橫幅「重新授權並儲存」：點擊本身是使用者手勢，可直接彈 GIS 視窗；
+   成功後補存一次（登入 callback 已重置橫幅與旗標），失敗時授權層已吐司、不重複提示 */
+export function reauthAndSave(){
+  return requestGoogleLogin({skipAutoLoad:true})
+    .then(() => saveAllToCloud({auto:true}))
+    .catch(() => {});
 }
 
 /* 閒置自動存（debounce）：改動後停手 3 分鐘即上傳——翻譯節奏中不打 API（每存一次
@@ -372,6 +399,7 @@ const IDLE_POLL_MS = 30 * 1000;
 let _lastSeenSnapshot = _lastCloudSnapshot;
 let _lastChangeAt = 0;
 export function idleSaveCheck(){
+  preExpirySaveCheck();   // 搶存不等閒置：連續打字中 token 快過期也要先存，放在改動偵測之前
   const snap = cloudSnapshot();
   if(snap !== _lastSeenSnapshot){          // 還在改動：重新起算閒置時間
     _lastSeenSnapshot = snap;
