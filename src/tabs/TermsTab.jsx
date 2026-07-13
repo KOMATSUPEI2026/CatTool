@@ -47,6 +47,8 @@ export default function TermsTab() {
   const termBase = useStore(s => s.termBase);
   const documents = useStore(s => s.documents);
   const currentDocId = useStore(s => s.currentDocId);
+  const ingestSrc = useStore(s => s.ingestSrcLang);
+  const ingestTgt = useStore(s => s.ingestTgtLang);
   const addTerm = useStore(s => s.addTerm);
   const importTerms = useStore(s => s.importTerms);
   const showToast = useStore(s => s.showToast);
@@ -60,9 +62,12 @@ export default function TermsTab() {
   const rows = filtered.slice((cur - 1) * PAGE_SIZE, cur * PAGE_SIZE);
 
   const onAdd = () => {
-    // 配對跟隨目前開啟中的檔案；沒開檔退回預設（入稿區語系選單的後備待入稿輪接回）
+    // 配對優先跟隨目前開啟中的檔案，沒有開檔才退回入稿區選擇，再退回預設
     const doc = documents.find(d => d.id === currentDocId) || null;
-    const p = docPair(doc);
+    const ingestReady = !!ingestSrc && !!ingestTgt && ingestSrc !== ingestTgt;
+    const p = doc ? docPair(doc)
+      : ingestReady ? { src: ingestSrc, tgt: ingestTgt }
+      : docPair(null);
     addTerm({ id: cid(), ja: '', zh: '', note: '', source: '', srcLang: p.src, tgtLang: p.tgt });
     setPage(1);   // 新詞條插在最前面，跳回第 1 頁讓使用者看得到
     setTimeout(() => document.querySelector('#term-tbody input[data-field="ja"]')?.focus());

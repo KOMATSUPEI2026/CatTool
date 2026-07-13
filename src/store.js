@@ -12,13 +12,20 @@ export const useStore = create((set) => ({
   termBase: [],
   tmSegments: [],
   folders: [],
-  currentTab: 'projects',
+  currentTab: 'ingest',
   currentDocId: null,
   collapsedFolders: new Set(),
   toast: null,   // { msg, seq }：seq 遞增讓同文字連發也能觸發重播（單例頂替）
+  // 入稿區語系配對（入稿前必選；文件建立時定格記錄）。放 store 供術語庫新增詞條當後備配對
+  ingestSrcLang: '',
+  ingestTgtLang: '',
 
   activateTab: (key) => set({ currentTab: key }),
   openDoc: (docId) => set({ currentDocId: docId, currentTab: 'work' }),
+  setIngestLang: (which, value) => set(which === 'src' ? { ingestSrcLang: value } : { ingestTgtLang: value }),
+
+  // 入稿兩條路徑共用：建檔後自動切到專案管理區
+  addDocuments: (docs) => set(s => ({ documents: [...s.documents, ...docs], currentTab: 'projects' })),
 
   showToast: (msg) => set(s => ({ toast: { msg, seq: (s.toast?.seq || 0) + 1 } })),
 

@@ -27,6 +27,17 @@ export function docStats(doc){
   };
 }
 
+export function segmentText(text){
+  return text.split(/(?<=[。！？\n])/).map(s=>s.trim()).filter(Boolean);
+}
+
+export function uniqueDocName(name, docs){
+  if(!docs.some(d=>d.name===name)) return name;
+  let n = 2;
+  while(docs.some(d=>d.name===`${name} (${n})`)) n++;
+  return `${name} (${n})`;
+}
+
 export function docPair(doc){
   return { src: (doc && doc.srcLang) || 'ja', tgt: (doc && doc.tgtLang) || 'zh-TW' };
 }
