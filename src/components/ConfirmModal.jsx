@@ -6,8 +6,8 @@ export default function ConfirmModal({ title, children, cancelLabel = '取消', 
         <h3>{title}</h3>
         <p className="modal-confirm-text">{children}</p>
         <div className="modal-actions modal-actions-center">
-          <button className="btn outline large" onClick={onCancel}>{cancelLabel}</button>
-          <button className="btn vermilion large" onClick={onOk}>{okLabel}</button>
+          <button className="btn outline large" data-role="cancel" onClick={onCancel}>{cancelLabel}</button>
+          <button className="btn vermilion large" data-role="ok" onClick={onOk}>{okLabel}</button>
         </div>
       </div>
     </div>

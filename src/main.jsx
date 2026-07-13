@@ -1,10 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import 'bootstrap-icons/font/bootstrap-icons.min.css';
-import '../cat-tool.css';
+import './cat-tool.css';
 import App from './App.jsx';
 import { useStore } from './store.js';
+import * as cloud from './cloud.js';
 
-// 遷移期後門：翻譯工作區未遷移前，測試腳本與主控台可經 window.__catStore.setState 注入資料
+// 測試後門：Puppeteer 驗收經 __catStore 注入資料、經 __catCloud 替換 sheetsApi 為假雲端
 window.__catStore = useStore;
+window.__catCloud = cloud;
 
 createRoot(document.getElementById('root')).render(<App />);

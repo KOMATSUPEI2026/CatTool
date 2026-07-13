@@ -32,6 +32,11 @@ export const useStore = create((set) => ({
   srUndoSnapshot: null,     // 搜尋取代的復原快照 { docId, items:[{segId, zh, confirmed, tmId}] }
   termTip: null,            // 術語提示卡 { segId, termId, ja, zh, anchor }；跨元件互斥（標點快捷鍵讓路）用
   textScale: 1,             // 防老花模式 ×scale（1/1.2/1.4）
+  // 雲端層（讀寫邏輯在 cloud.js，這裡只放需要驅動畫面的狀態）
+  auth: { token: null, email: null, expiresAt: 0 },   // Google 授權（token 約 1 小時失效）
+  cloudBusy: false,         // 儲存進行中（鎖「儲存至雲端」按鈕＋重入守門）
+  welcomeVisible: true,     // 歡迎面板（登入成功或選訪客後收起）
+  confirmModal: null,       // 全域確認 Modal { title, text, cancelLabel, okLabel, onOk, wide }；雲端層等元件外程式碼用
 
   activateTab: (key) => set({ currentTab: key, termTip: null }),
   openDoc: (docId) => set({ currentDocId: docId, currentTab: 'work' }),
@@ -42,6 +47,11 @@ export const useStore = create((set) => ({
     return { textScale: scales[(scales.indexOf(s.textScale) + 1) % scales.length], termTip: null };
   }),
   setIngestLang: (which, value) => set(which === 'src' ? { ingestSrcLang: value } : { ingestTgtLang: value }),
+
+  setAuth: (patch) => set(s => ({ auth: { ...s.auth, ...patch } })),
+  hideWelcome: () => set({ welcomeVisible: false }),
+  openConfirm: (cfg) => set({ confirmModal: cfg }),
+  closeConfirm: () => set({ confirmModal: null }),
 
   // 入稿兩條路徑共用：建檔後自動切到專案管理區
   addDocuments: (docs) => set(s => ({ documents: [...s.documents, ...docs], currentTab: 'projects' })),

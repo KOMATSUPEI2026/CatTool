@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useStore } from '../store.js';
 import { autoGrow } from '../workActions.js';
+import { autoSaveAfterSegTool } from '../cloud.js';
 
 /* 句段整理五功能 Modal（編輯/分割、排序、合併、新增、刪除）。
    送出後的資料變動一律走 store actions；狀態規則（V28 延伸）集中在 store 註解。
-   TODO(末輪雲端層)：vanilla 送出後有 autoSaveAfterSegTool()，Sheets 搬遷時在各 Modal 送出處補上 */
+   各 Modal 送出後 autoSaveAfterSegTool 即時存雲端（已登入才觸發） */
 
 /* 共用外殼：標題 + 提示 + 可捲動清單 + （選配 footer）+ 錯誤列 + 取消/送出 */
 function SegToolModal({ title, hint, error, listRef, children, footer, onCancel, onSubmit }) {
@@ -83,6 +84,7 @@ export function SegEditModal({ doc, onClose }) {
   const submit = () => {
     if (!items.some(it => it.ja.trim())) { setError('至少要保留一個句段。'); return; }
     applySegEdit(items);
+    autoSaveAfterSegTool();
     onClose();
   };
 
@@ -129,7 +131,7 @@ export function SegOrderModal({ doc, onClose }) {
   return (
     <SegToolModal title="排序句子" hint="按住任一句段上下拖曳調整順序，按「送出」後生效。"
                   error="" listRef={listRef} onCancel={onClose}
-                  onSubmit={() => { applySegOrder(order); onClose(); }}>
+                  onSubmit={() => { applySegOrder(order); autoSaveAfterSegTool(); onClose(); }}>
       <div onDragOver={onDragOver}>
         {order.map((id, i) => (
           <div className={'seg-tool-item' + (dragId === id ? ' dragging' : '')} key={id}
@@ -162,6 +164,7 @@ export function SegMergeModal({ doc, onClose }) {
       setError('連續的句子才可合併，請選取連續的句子。'); return;
     }
     mergeSegments([...sel]);
+    autoSaveAfterSegTool();
     onClose();
   };
 
@@ -185,6 +188,7 @@ export function SegAddModal({ doc, onClose }) {
     if (pos === null) { setError('請先點選插入位置。'); return; }
     if (!text.trim()) { setError('請輸入新句原文。'); return; }
     addSegment(pos, text.trim());
+    autoSaveAfterSegTool();
     onClose();
   };
 
@@ -218,6 +222,7 @@ export function SegDeleteModal({ doc, onClose }) {
   const submit = () => {
     if (sel.size === 0) { setError('請先選取要刪除的句子。'); return; }
     deleteSegments([...sel]);
+    autoSaveAfterSegTool();
     onClose();
   };
 

@@ -6,7 +6,11 @@ import WorkTab from './tabs/WorkTab.jsx';
 import TermsTab from './tabs/TermsTab.jsx';
 import TmTab from './tabs/TmTab.jsx';
 import Toast from './components/Toast.jsx';
+import ConfirmModal from './components/ConfirmModal.jsx';
+import WelcomeOverlay from './components/WelcomeOverlay.jsx';
+import AccountModal from './components/AccountModal.jsx';
 import ScrollCapsule from './components/ScrollCapsule.jsx';
+import { requestGoogleLogin, saveAllToCloud } from './cloud.js';
 import TmSidebar from './components/TmSidebar.jsx';
 import PvSidebar from './components/PvSidebar.jsx';
 import PunctBar from './components/PunctBar.jsx';
@@ -30,9 +34,14 @@ export default function App() {
   const docCount    = useStore(s => s.documents.length);
   const textScale   = useStore(s => s.textScale);
   const cycleTextScale = useStore(s => s.cycleTextScale);
+  const auth         = useStore(s => s.auth);
+  const cloudBusy    = useStore(s => s.cloudBusy);
+  const confirmModal = useStore(s => s.confirmModal);
+  const closeConfirm = useStore(s => s.closeConfirm);
 
   const [darkMode, setDarkMode] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -58,8 +67,15 @@ export default function App() {
             <span>文件數　<b>{docCount}</b></span>
           </div>
           <div className="header-actions">
-            {/* 訪客/雲端兩顆按鈕於末輪雲端層接線 */}
-            <button className="icon-btn" title="點擊連結 Google 帳號"><i className="bi bi-person"></i> 訪客模式</button>
+            <button className="icon-btn" id="btn-account"
+                    title={auth.token ? '點擊登出 Google 帳號' : '點擊連結 Google 帳號'}
+                    onClick={() => {
+                      if (!auth.token) { requestGoogleLogin().catch(() => {}); return; }
+                      setShowAccount(true);
+                    }}>
+              <i className={'bi ' + (auth.token ? 'bi-person-check' : 'bi-person')}></i>
+              {' '}{auth.token ? (auth.email || '已連結 Google') : '訪客模式'}
+            </button>
             <button className="icon-btn" id="btn-shortcuts" onClick={() => setShowShortcuts(true)}>
               <i className="bi bi-keyboard"></i> 快捷鍵
             </button>
@@ -69,7 +85,11 @@ export default function App() {
             <button className="icon-btn" id="btn-text-scale" onClick={cycleTextScale}>
               <i className="bi bi-zoom-in"></i> 防老花模式：{textScale}x
             </button>
-            <button className="icon-btn" title="將文件、術語庫與翻譯記憶儲存至 Google 試算表"><i className="bi bi-cloud-arrow-up"></i> 儲存至雲端</button>
+            <button className="icon-btn" id="btn-cloud-save" disabled={cloudBusy}
+                    title="將文件、術語庫與翻譯記憶儲存至 Google 試算表"
+                    onClick={() => { saveAllToCloud(); }}>
+              <i className="bi bi-cloud-arrow-up"></i> {cloudBusy ? '儲存中…' : '儲存至雲端'}
+            </button>
           </div>
         </div>
       </header>
@@ -99,7 +119,20 @@ export default function App() {
       <PunctBar />
       <ScrollCapsule />
       <Toast />
+      <WelcomeOverlay />
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+      {showAccount && <AccountModal onClose={() => setShowAccount(false)} />}
+      {/* 全域確認 Modal：雲端層等元件外程式碼經 store.openConfirm 觸發；text 以 \n 斷行 */}
+      {confirmModal &&
+        <ConfirmModal title={confirmModal.title}
+                      cancelLabel={confirmModal.cancelLabel} okLabel={confirmModal.okLabel}
+                      wide={confirmModal.wide}
+                      onCancel={closeConfirm}
+                      onOk={() => { closeConfirm(); confirmModal.onOk?.(); }}>
+          {confirmModal.text.split('\n').map((line, i) => (
+            i === 0 ? line : <span key={i}><br />{line}</span>
+          ))}
+        </ConfirmModal>}
     </div>
   );
 }
