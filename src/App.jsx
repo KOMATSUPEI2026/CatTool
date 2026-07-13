@@ -1,5 +1,7 @@
 import { useStore } from './store.js';
 import ProjectsTab from './tabs/ProjectsTab.jsx';
+import TermsTab from './tabs/TermsTab.jsx';
+import TmTab from './tabs/TmTab.jsx';
 import Toast from './components/Toast.jsx';
 import ScrollCapsule from './components/ScrollCapsule.jsx';
 
@@ -12,7 +14,7 @@ const TABS = [
 ];
 
 /* 已遷移分頁掛元件；其餘輪次到位前掛佔位卡 */
-const TAB_VIEWS = { projects: ProjectsTab };
+const TAB_VIEWS = { projects: ProjectsTab, terms: TermsTab, tm: TmTab };
 
 function Placeholder({ label }) {
   return <div className="card"><p>{label}——React 版遷移中，本分頁待後續輪次搬遷。</p></div>;

@@ -27,6 +27,29 @@ export function docStats(doc){
   };
 }
 
+export function docPair(doc){
+  return { src: (doc && doc.srcLang) || 'ja', tgt: (doc && doc.tgtLang) || 'zh-TW' };
+}
+
+export function downloadJSON(data, filename){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function importJSON(file, cb, onError){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{ cb(JSON.parse(reader.result)); }
+    catch(err){ onError && onError(err.message); }
+  };
+  reader.readAsText(file);
+}
+
 export const LANG_NAMES = {
   'zh-TW':'繁體中文','zh-HK':'繁體中文','zh-CN':'簡體中文','zh-SG':'簡體中文',
   'en':'英文','en-US':'英文','en-GB':'英文',

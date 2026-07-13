@@ -39,5 +39,22 @@ export const useStore = create((set) => ({
   setDocFolder: (docId, folderId) => set(s => ({
     documents: s.documents.map(d =>
       d.id === docId ? { ...d, folderId: folderId || null, updatedAt: Date.now() } : d)
-  }))
+  })),
+
+  addTerm: (term) => set(s => ({ termBase: [term, ...s.termBase] })),
+  updateTerm: (id, field, value) => set(s => ({
+    termBase: s.termBase.map(t => t.id === id ? { ...t, [field]: value } : t)
+  })),
+  deleteTerm: (id) => set(s => ({ termBase: s.termBase.filter(t => t.id !== id) })),
+  importTerms: (rows) => set(s => ({ termBase: [...s.termBase, ...rows] })),
+
+  // 刪 TM 不清譯文：懸空參照的句段徽章退回未確認，譯文文字保留（核心設計決策 1）
+  deleteTmSegment: (tmId) => set(s => ({
+    tmSegments: s.tmSegments.filter(t => t.id !== tmId),
+    documents: s.documents.map(d => d.segments.some(seg => seg.tmId === tmId)
+      ? { ...d, segments: d.segments.map(seg =>
+          seg.tmId === tmId ? { ...seg, tmId: null, confirmed: false } : seg) }
+      : d)
+  })),
+  importTmSegments: (rows) => set(s => ({ tmSegments: [...s.tmSegments, ...rows] }))
 }));
