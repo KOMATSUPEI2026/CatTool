@@ -42,6 +42,57 @@ export function docPair(doc){
   return { src: (doc && doc.srcLang) || 'ja', tgt: (doc && doc.tgtLang) || 'zh-TW' };
 }
 
+/* 嚴格語系隔離：TM/術語只在「配對完全相同」下比對顯示（核心設計決策 2） */
+export function samePair(rec, doc){
+  const p = docPair(doc);
+  return ((rec.srcLang||'ja') === p.src) && ((rec.tgtLang||'zh-TW') === p.tgt);
+}
+
+/* CJK 語系串接不加空格，其餘以半形空格串接（合併原文/譯文時依各自語系決定） */
+export function langJoiner(code){ return /^(ja|zh|ko|th)/.test(code||'') ? '' : ' '; }
+
+/* ---- 字元 bigram Jaccard 相似度（簡易 TM 比對率） ---- */
+function bigrams(str){
+  const s = str.replace(/\s/g,'');
+  const set = new Set();
+  for(let i=0;i<s.length-1;i++) set.add(s.slice(i,i+2));
+  if(set.size===0 && s.length>0) set.add(s);
+  return set;
+}
+export function similarity(a,b){
+  const A = bigrams(a), B = bigrams(b);
+  if(A.size===0 || B.size===0) return 0;
+  let inter=0;
+  for(const g of A) if(B.has(g)) inter++;
+  const union = A.size + B.size - inter;
+  return union===0 ? 0 : inter/union;
+}
+
+/* ---- 術語比對：在原文中找出所有命中的詞條（最長優先、不重疊） ---- */
+export function findTermHits(text, termBase, doc){
+  const hits = [];
+  const sorted = termBase.filter(t=>samePair(t, doc)).sort((a,b)=>b.ja.length-a.ja.length);
+  const used = new Array(text.length).fill(false);
+  for(const term of sorted){
+    if(!term.ja) continue;
+    let idx = 0;
+    while(true){
+      const found = text.indexOf(term.ja, idx);
+      if(found===-1) break;
+      const end = found + term.ja.length;
+      let overlap=false;
+      for(let i=found;i<end;i++) if(used[i]){overlap=true;break;}
+      if(!overlap){
+        hits.push({start:found, end, term});
+        for(let i=found;i<end;i++) used[i]=true;
+      }
+      idx = found + term.ja.length;
+    }
+  }
+  hits.sort((a,b)=>a.start-b.start);
+  return hits;
+}
+
 export function downloadJSON(data, filename){
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
