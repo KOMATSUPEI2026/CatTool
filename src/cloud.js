@@ -119,7 +119,19 @@ export function loadSheetIds(){
   try{ return JSON.parse(localStorage.getItem(SHEET_IDS_KEY)) || {}; }
   catch(_){ return {}; }
 }
-function saveSheetIds(ids){ localStorage.setItem(SHEET_IDS_KEY, JSON.stringify(ids)); }
+function saveSheetIds(ids){
+  localStorage.setItem(SHEET_IDS_KEY, JSON.stringify(ids));
+  _missingIdsNoticeShown = false;   // 連結已更新（建檔/重連）：缺 ID 提示重新武裝
+}
+
+/* 缺 ID 守門：ID 只存 localStorage，被瀏覽器清掉（或第一次儲存）時絕不靜默建檔——
+   曾在正式站踩過「連結遺失→靜默重建三件套」造成 Drive 重複檔案與讀取混亂 */
+const SHEET_KIND_LABELS = { docs:'文件庫', terms:'術語庫', tm:'翻譯記憶' };
+let _missingIdsNoticeShown = false;   // 自動儲存的缺 ID 提示只吐一次，避免每 30 秒輪詢洗版
+function missingSheetKinds(){
+  const ids = loadSheetIds();
+  return Object.keys(SHEET_KIND_LABELS).filter(k => !ids[k]).map(k => SHEET_KIND_LABELS[k]);
+}
 
 /* 分頁標題不可含 []/\*?: 與引號、不可撞常駐分頁；重名加 (2) 尾碼，實際標題記回 _索引 */
 function sheetTitleForDoc(name, used){
@@ -149,25 +161,29 @@ function serializeForCloud(){
   };
 }
 
-/* 缺哪份建哪份；建立時一併寫好標記分頁（載入與貼網址辨識都認這些分頁名） */
+/* 缺哪份建哪份；建立時一併寫好標記分頁（載入與貼網址辨識都認這些分頁名）。
+   每建成一份立刻記下 ID：三份全建完才存的話，中途 401 重授權沒走完會丟失已建的 ID，
+   在 Drive 留下無主檔、下次儲存又建一批（正式站踩過的洩漏） */
 async function ensureCloudFiles(){
   const ids = loadSheetIds();
   if(!ids.docs){
     const r = await sheetsApi.post('', { properties:{title:SHEET_FILE_TITLES.docs},
       sheets:[{properties:{title:'_索引'}}, {properties:{title:'_資料夾'}}] });
     ids.docs = r.data.spreadsheetId;
+    saveSheetIds(ids);
   }
   if(!ids.terms){
     const r = await sheetsApi.post('', { properties:{title:SHEET_FILE_TITLES.terms},
       sheets:[{properties:{title:'術語庫'}}] });
     ids.terms = r.data.spreadsheetId;
+    saveSheetIds(ids);
   }
   if(!ids.tm){
     const r = await sheetsApi.post('', { properties:{title:SHEET_FILE_TITLES.tm},
       sheets:[{properties:{title:'翻譯記憶'}}] });
     ids.tm = r.data.spreadsheetId;
+    saveSheetIds(ids);
   }
-  saveSheetIds(ids);
   return ids;
 }
 
@@ -180,6 +196,26 @@ export async function saveAllToCloud(opts = {}){
       cancelLabel:'取消', okLabel:'立即登入',
       onOk: () => { requestGoogleLogin({skipAutoLoad:true}).then(saveAllToCloud).catch(()=>{}); }
     });
+    return;
+  }
+  /* 缺 ID 不靜默建檔：手動存先確認（既有試算表可能還在 Drive，先給重連的機會）；
+     自動存直接暫停並提示一次（自動流程絕不該擅自建新檔） */
+  const missing = missingSheetKinds();
+  if(missing.length && !opts.allowCreate){
+    if(opts.auto){
+      if(!_missingIdsNoticeShown){
+        toast('自動儲存暫停：找不到雲端試算表連結，請手動儲存或到帳號視窗重新連結');
+        _missingIdsNoticeShown = true;
+      }
+    }else{
+      st().openConfirm({
+        title:'建立新試算表',
+        text:`在這個瀏覽器找不到「${missing.join('、')}」的試算表連結。\n第一次儲存屬正常；若之前存過，可能是瀏覽器清除了記錄，\n請先到帳號視窗貼網址重新連結，避免建出重複的試算表。`,
+        cancelLabel:'取消', okLabel:'建立新檔並儲存',
+        onOk: () => saveAllToCloud({...opts, allowCreate:true}),
+        wide: true
+      });
+    }
     return;
   }
   useStore.setState({ cloudBusy: true });
