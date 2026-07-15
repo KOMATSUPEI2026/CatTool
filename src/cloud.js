@@ -257,10 +257,40 @@ export async function saveAllToCloud(opts = {}){
     const hhmm = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
     toast(`${opts.auto ? '已自動儲存至雲端' : '已儲存至雲端'}（${documents.length} 份文件、${termBase.length} 條術語、${tmSegments.length} 句記憶｜${hhmm}）`);
   }catch(err){
-    toast('儲存失敗：' + (err.response?.data?.error?.message || err.message));
+    // 404＝連結的試算表已被刪（含垃圾桶清空）：手動存提供 App 內自救，免開 DevTools 清 localStorage；
+    // 自動存不彈窗（維持只報錯），使用者手動存時再處理
+    if(err.response?.status === 404 && !opts.auto) offerUnlinkDeadSheets();
+    else toast('儲存失敗：' + (err.response?.data?.error?.message || err.message));
   }finally{
     useStore.setState({ cloudBusy: false });
   }
+}
+
+/* 儲存遇 404 的自救：逐份健檢三個 ID，只清掉找不到的（仍在的保留沿用，不重複建），
+   再以 allowCreate 重存——缺哪份建哪份，接回 ensureCloudFiles 原有流程 */
+function offerUnlinkDeadSheets(){
+  st().openConfirm({
+    title:'找不到雲端試算表',
+    text:'連結的試算表可能已被刪除。\n要解除失效連結並重新儲存嗎？\n仍存在的試算表會保留沿用，只為找不到的部分建立新檔。',
+    cancelLabel:'取消', okLabel:'解除失效連結並儲存',
+    onOk: async () => {
+      try{
+        const ids = loadSheetIds();
+        for(const k of Object.keys(SHEET_KIND_LABELS)){
+          if(!ids[k]) continue;
+          const alive = await sheetsApi.get(`/${ids[k]}`, {params:{fields:'spreadsheetId'}})
+            .then(() => true)
+            .catch(e => { if(e.response?.status === 404) return false; throw e; });
+          if(!alive) delete ids[k];
+        }
+        saveSheetIds(ids);
+        saveAllToCloud({allowCreate:true});
+      }catch(err){
+        toast('儲存失敗：' + (err.response?.data?.error?.message || err.message));
+      }
+    },
+    wide: true
+  });
 }
 
 /* 讀取：batchGet 需重複 ranges 參數，手組 query string（axios 陣列序列化格式 Google 不收） */
